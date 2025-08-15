@@ -1,20 +1,26 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect, Depends, status
+from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+import openai
+from openai import OpenAI
+import stripe
+
+from vercel_blob import put, delete, list_blobs
+
 import asyncio
 import json
 import os
 import uuid
-from typing import List, Dict, Any, Optional
-import subprocess
-import tempfile
+from typing import List, Dict, Any
+from datetime import datetime, timezone
+import httpx
 from pathlib import Path
 import base64
-from openai import OpenAI
-import httpx
-from datetime import datetime, timedelta
+import re
 
 from database import get_db, create_tables, User, Project, RenderJob, ProjectAnalytics, AISession
 from database import (
@@ -23,26 +29,137 @@ from database import (
 )
 from auth import verify_password, get_password_hash, create_access_token, verify_token
 
+from stripe_integration import (
+    create_stripe_customer, create_checkout_session, create_usage_invoice,
+    cancel_subscription, get_customer_portal_url, verify_webhook_signature,
+    calculate_usage_charges, get_plan_limits, PRICING_CONFIG
+)
+from database import (
+    get_user_by_stripe_customer_id, update_user_subscription, create_payment_record,
+    update_user_usage, reset_monthly_usage, get_project
+)
+
+from security import (
+    auth_rate_limiter, ai_rate_limiter, upload_rate_limiter, general_rate_limiter, webhook_rate_limiter,
+    validate_password, sanitize_input, validate_email, validate_username,
+    get_client_info, log_security_event, check_user_permissions, SecurityHeaders, SECURITY_CONFIG
+)
+
+from monitoring import (
+    setup_monitoring, monitoring_middleware, performance_monitor, health_checker, 
+    error_handler, logger
+)
+
+from email_service import email_service
+
 app = FastAPI(title="FilmFusion Backend API", version="1.0.0")
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # Security
 security = HTTPBearer()
 
-# CORS middleware for frontend communication
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=["filmfusion-production-16fd.up.railway.app", "localhost", "127.0.0.1"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=SECURITY_CONFIG["allowed_origins"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
+
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    """Add security headers and general rate limiting"""
+    await general_rate_limiter(request)
+    
+    if request.headers.get("content-length"):
+        content_length = int(request.headers["content-length"])
+        if content_length > SECURITY_CONFIG["max_request_size"]:
+            raise HTTPException(status_code=413, detail="Request too large")
+    
+    response = await call_next(request)
+    
+    response = SecurityHeaders.add_security_headers(response)
+    
+    return response
+
+@app.middleware("http")
+async def monitoring_middleware_wrapper(request: Request, call_next):
+    """Wrapper for monitoring middleware"""
+    return await monitoring_middleware(request, call_next)
 
 @app.on_event("startup")
 async def startup_event():
     create_tables()
+    setup_monitoring()
+    logger.info("FilmFusion Backend API started successfully")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("FilmFusion Backend API shutting down")
+
+@app.get("/health")
+async def health_check():
+    """Basic health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+@app.get("/health/detailed")
+async def detailed_health_check(db: Session = Depends(get_db)):
+    """Detailed health check with dependency status"""
+    try:
+        checks = {
+            "database": await health_checker.check_database(db),
+            "openai_api": await health_checker.check_openai_api(),
+            "stripe_api": await health_checker.check_stripe_api(),
+            "system_resources": health_checker.check_system_resources()
+        }
+        
+        # Determine overall status
+        statuses = [check["status"] for check in checks.values()]
+        if "unhealthy" in statuses:
+            overall_status = "unhealthy"
+        elif "degraded" in statuses:
+            overall_status = "degraded"
+        else:
+            overall_status = "healthy"
+        
+        return {
+            "status": overall_status,
+            "timestamp": datetime.utcnow().isoformat(),
+            "checks": checks
+        }
+    except Exception as e:
+        error_handler.log_error(e, {"endpoint": "/health/detailed"})
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }
+
+@app.get("/metrics")
+async def get_metrics():
+    """Get application performance metrics"""
+    try:
+        metrics = performance_monitor.get_metrics()
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "metrics": metrics
+        }
+    except Exception as e:
+        error_handler.log_error(e, {"endpoint": "/metrics"})
+        raise HTTPException(status_code=500, detail="Failed to retrieve metrics")
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
     """Get current authenticated user"""
@@ -75,30 +192,60 @@ async def root():
     return {"message": "FilmFusion Backend API", "status": "running", "features": ["script_generation", "voiceover", "image_generation", "code_interpreter", "video_planning", "content_analysis", "visual_analysis", "workflow_debugging", "multi_agent_orchestration", "content_evaluation"]}
 
 @app.post("/api/auth/register")
-async def register(request: dict, db: Session = Depends(get_db)):
+async def register(request: Request, data: dict, db: Session = Depends(get_db)):
     """Register a new user"""
     try:
-        email = request.get("email")
-        username = request.get("username")
-        password = request.get("password")
-        full_name = request.get("full_name")
+        await auth_rate_limiter(request)
+        
+        client_info = get_client_info(request)
+        
+        email = data.get("email", "").strip().lower()
+        username = data.get("username", "").strip()
+        password = data.get("password", "")
+        full_name = sanitize_input(data.get("full_name", ""), 100)
         
         if not email or not username or not password:
+            log_security_event("registration_attempt_missing_fields", client_info)
             raise HTTPException(status_code=400, detail="Email, username, and password are required")
+        
+        if not validate_email(email):
+            log_security_event("registration_attempt_invalid_email", client_info, {"email": email})
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        if not validate_username(username):
+            log_security_event("registration_attempt_invalid_username", client_info, {"username": username})
+            raise HTTPException(status_code=400, detail="Username must be 3-30 characters, alphanumeric, underscore, or hyphen only")
+        
+        if not validate_password(password):
+            log_security_event("registration_attempt_weak_password", client_info)
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters"
+            )
         
         # Check if user already exists
         if get_user_by_email(db, email):
+            log_security_event("registration_attempt_duplicate_email", client_info, {"email": email})
             raise HTTPException(status_code=400, detail="Email already registered")
         
         if get_user_by_username(db, username):
+            log_security_event("registration_attempt_duplicate_username", client_info, {"username": username})
             raise HTTPException(status_code=400, detail="Username already taken")
         
         # Create new user
         hashed_password = get_password_hash(password)
         user = create_user(db, email, username, hashed_password, full_name)
         
+        try:
+            await email_service.send_welcome_email(user.email, user.full_name or user.username)
+        except Exception as e:
+            logger.warning(f"Failed to send welcome email to {user.email}: {str(e)}")
+        
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
+        
+        log_security_event("user_registered", client_info, {"user_id": user.id, "email": email})
+        error_handler.log_business_event("user_registration", {"user_id": user.id, "email": email}, user.id)
         
         return {
             "success": True,
@@ -115,25 +262,44 @@ async def register(request: dict, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
+        log_security_event("registration_error", client_info, {"error": str(e)})
+        error_handler.log_error(e, {"endpoint": "/api/auth/register", "email": data.get("email")})
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/auth/login")
-async def login(request: dict, db: Session = Depends(get_db)):
-    """Login user"""
+async def login(request: Request, data: dict, db: Session = Depends(get_db)):
+    """Login user with enhanced security"""
     try:
-        email = request.get("email")
-        password = request.get("password")
+        await auth_rate_limiter(request)
+        
+        client_info = get_client_info(request)
+        
+        email = data.get("email", "").strip().lower()
+        password = data.get("password", "")
         
         if not email or not password:
+            log_security_event("login_attempt_missing_fields", client_info)
             raise HTTPException(status_code=400, detail="Email and password are required")
+        
+        if not validate_email(email):
+            log_security_event("login_attempt_invalid_email", client_info, {"email": email})
+            raise HTTPException(status_code=400, detail="Invalid email format")
         
         # Get user by email
         user = get_user_by_email(db, email)
         if not user or not verify_password(password, user.hashed_password):
+            log_security_event("login_attempt_failed", client_info, {"email": email})
             raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        if not user.is_active:
+            log_security_event("login_attempt_inactive_user", client_info, {"user_id": user.id})
+            raise HTTPException(status_code=403, detail="Account is deactivated")
         
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
+        
+        log_security_event("user_login", client_info, {"user_id": user.id, "email": email})
+        error_handler.log_business_event("user_login", {"user_id": user.id, "email": email}, user.id)
         
         return {
             "success": True,
@@ -150,6 +316,8 @@ async def login(request: dict, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
+        log_security_event("login_error", client_info, {"error": str(e)})
+        error_handler.log_error(e, {"endpoint": "/api/auth/login", "email": data.get("email")})
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/projects")
@@ -561,18 +729,299 @@ async def evaluate_content_with_reasoning(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Content evaluation failed: {str(e)}")
 
-@app.post("/api/generate-script")
-async def generate_script(request: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Generate AI script using OpenAI API with reasoning capabilities"""
+@app.get("/api/pricing")
+async def get_pricing():
+    """Get pricing plans and features"""
+    return {
+        "success": True,
+        "plans": PRICING_CONFIG["plans"],
+        "usage_pricing": PRICING_CONFIG["usage_pricing"]
+    }
+
+@app.post("/api/create-checkout-session")
+async def create_checkout(request: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create Stripe checkout session for subscription"""
     try:
+        plan = request.get('plan', 'pro')
+        
+        if plan not in PRICING_CONFIG['plans'] or plan == 'free':
+            raise HTTPException(status_code=400, detail="Invalid plan selected")
+        
+        price_id = PRICING_CONFIG['plans'][plan]['price_id']
+        if not price_id:
+            raise HTTPException(status_code=400, detail="Plan not configured")
+        
+        # Create Stripe customer if doesn't exist
+        if not current_user.stripe_customer_id:
+            customer_result = await create_stripe_customer(
+                email=current_user.email,
+                name=current_user.full_name
+            )
+            
+            if not customer_result['success']:
+                raise HTTPException(status_code=500, detail="Failed to create customer")
+            
+            # Update user with Stripe customer ID
+            current_user.stripe_customer_id = customer_result['customer_id']
+            db.commit()
+        
+        # Create checkout session
+        success_url = request.get('success_url', 'https://filmfusion.app/dashboard?payment=success')
+        cancel_url = request.get('cancel_url', 'https://filmfusion.app/pricing?payment=canceled')
+        
+        session_result = await create_checkout_session(
+            customer_id=current_user.stripe_customer_id,
+            price_id=price_id,
+            success_url=success_url,
+            cancel_url=cancel_url
+        )
+        
+        if not session_result['success']:
+            raise HTTPException(status_code=500, detail="Failed to create checkout session")
+        
+        return {
+            "success": True,
+            "checkout_url": session_result['checkout_url'],
+            "session_id": session_result['session_id']
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cancel-subscription")
+async def cancel_user_subscription(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Cancel user's subscription"""
+    try:
+        if not current_user.stripe_subscription_id:
+            raise HTTPException(status_code=400, detail="No active subscription found")
+        
+        result = await cancel_subscription(current_user.stripe_subscription_id)
+        
+        if not result['success']:
+            raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+        
+        return {
+            "success": True,
+            "message": "Subscription will be canceled at the end of the billing period",
+            "canceled_at": result['canceled_at']
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/customer-portal")
+async def get_customer_portal(current_user: User = Depends(get_current_user)):
+    """Get Stripe customer portal URL"""
+    try:
+        if not current_user.stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No Stripe customer found")
+        
+        return_url = "https://filmfusion.app/dashboard"
+        result = await get_customer_portal_url(current_user.stripe_customer_id, return_url)
+        
+        if not result['success']:
+            raise HTTPException(status_code=500, detail="Failed to create portal session")
+        
+        return {
+            "success": True,
+            "portal_url": result['portal_url']
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/usage")
+async def get_user_usage(current_user: User = Depends(get_current_user)):
+    """Get user's current usage and limits"""
+    try:
+        plan_limits = get_plan_limits(current_user.subscription_plan)
+        
+        usage_data = {
+            "current_usage": {
+                "ai_calls": current_user.monthly_ai_calls,
+                "render_minutes": current_user.monthly_render_minutes,
+                "storage_gb": current_user.monthly_storage_gb
+            },
+            "plan_limits": {
+                "ai_calls_limit": plan_limits['ai_calls_limit'],
+                "render_minutes_limit": plan_limits['render_minutes_limit'],
+                "storage_gb_limit": plan_limits['storage_gb_limit']
+            },
+            "plan": current_user.subscription_plan,
+            "subscription_status": current_user.subscription_status,
+            "usage_reset_date": current_user.usage_reset_date.isoformat() if current_user.usage_reset_date else None
+        }
+        
+        # Calculate potential overage charges
+        overage_charges = calculate_usage_charges(usage_data['current_usage'], usage_data['plan_limits'])
+        usage_data['potential_overage'] = overage_charges
+        
+        return {
+            "success": True,
+            "usage": usage_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/stripe-webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """Handle Stripe webhooks with enhanced security"""
+    try:
+        await webhook_rate_limiter(request)
+        
+        payload = await request.body()
+        signature = request.headers.get('stripe-signature')
+        
+        if not verify_webhook_signature(payload, signature):
+            client_info = get_client_info(request)
+            log_security_event("webhook_invalid_signature", client_info)
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        
+        event = stripe.Event.construct_from(
+            json.loads(payload), stripe.api_key
+        )
+        
+        # Handle different event types
+        if event['type'] == 'customer.subscription.created':
+            await handle_subscription_created(event['data']['object'], db)
+        elif event['type'] == 'customer.subscription.updated':
+            await handle_subscription_updated(event['data']['object'], db)
+        elif event['type'] == 'customer.subscription.deleted':
+            await handle_subscription_deleted(event['data']['object'], db)
+        elif event['type'] == 'invoice.payment_succeeded':
+            await handle_payment_succeeded(event['data']['object'], db)
+        elif event['type'] == 'invoice.payment_failed':
+            await handle_payment_failed(event['data']['object'], db)
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        client_info = get_client_info(request)
+        log_security_event("webhook_error", client_info, {"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def handle_subscription_created(subscription, db: Session):
+    """Handle subscription creation"""
+    customer_id = subscription['customer']
+    user = get_user_by_stripe_customer_id(db, customer_id)
+    
+    if user:
+        plan_name = "pro"  # Default, could be determined from price_id
+        subscription_data = {
+            'subscription_id': subscription['id'],
+            'status': subscription['status'],
+            'plan': plan_name,
+            'period_start': datetime.fromtimestamp(subscription['current_period_start'], timezone.utc),
+            'period_end': datetime.fromtimestamp(subscription['current_period_end'], timezone.utc)
+        }
+        update_user_subscription(db, user.id, subscription_data)
+
+async def handle_subscription_updated(subscription, db: Session):
+    """Handle subscription updates"""
+    customer_id = subscription['customer']
+    user = get_user_by_stripe_customer_id(db, customer_id)
+    
+    if user:
+        subscription_data = {
+            'subscription_id': subscription['id'],
+            'status': subscription['status'],
+            'plan': user.subscription_plan,  # Keep existing plan
+            'period_start': datetime.fromtimestamp(subscription['current_period_start'], timezone.utc),
+            'period_end': datetime.fromtimestamp(subscription['current_period_end'], timezone.utc)
+        }
+        update_user_subscription(db, user.id, subscription_data)
+
+async def handle_subscription_deleted(subscription, db: Session):
+    """Handle subscription cancellation"""
+    customer_id = subscription['customer']
+    user = get_user_by_stripe_customer_id(db, customer_id)
+    
+    if user:
+        subscription_data = {
+            'subscription_id': None,
+            'status': 'canceled',
+            'plan': 'free',
+            'period_start': None,
+            'period_end': None
+        }
+        update_user_subscription(db, user.id, subscription_data)
+
+async def handle_payment_succeeded(invoice, db: Session):
+    """Handle successful payment"""
+    customer_id = invoice['customer']
+    user = get_user_by_stripe_customer_id(db, customer_id)
+    
+    if user:
+        payment_data = {
+            'payment_intent_id': invoice.get('payment_intent'),
+            'invoice_id': invoice['id'],
+            'amount': invoice['amount_paid'],
+            'currency': invoice['currency'],
+            'status': 'succeeded',
+            'type': 'subscription' if invoice.get('subscription') else 'usage',
+            'description': f"Payment for {invoice['description'] or 'FilmFusion subscription'}"
+        }
+        create_payment_record(db, user.id, payment_data)
+
+async def handle_payment_failed(invoice, db: Session):
+    """Handle failed payment"""
+    customer_id = invoice['customer']
+    user = get_user_by_stripe_customer_id(db, customer_id)
+    
+    if user:
+        payment_data = {
+            'payment_intent_id': invoice.get('payment_intent'),
+            'invoice_id': invoice['id'],
+            'amount': invoice['amount_due'],
+            'currency': invoice['currency'],
+            'status': 'failed',
+            'type': 'subscription' if invoice.get('subscription') else 'usage',
+            'description': f"Failed payment for {invoice['description'] or 'FilmFusion subscription'}"
+        }
+        create_payment_record(db, user.id, payment_data)
+
+@app.post("/api/generate-script")
+async def generate_script(request: Request, data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Generate AI script with rate limiting and usage tracking"""
+    try:
+        await ai_rate_limiter(request)
+        
+        await check_user_permissions(current_user)
+        
+        # Check usage limits
+        plan_limits = get_plan_limits(current_user.subscription_plan)
+        if (plan_limits['ai_calls_limit'] != -1 and 
+            current_user.monthly_ai_calls >= plan_limits['ai_calls_limit']):
+            raise HTTPException(status_code=429, detail="AI usage limit exceeded. Upgrade your plan or wait for next billing cycle.")
+        
+        topic = sanitize_input(data.get('topic', 'a product demo'), 200)
+        duration = sanitize_input(data.get('duration', '2 minutes'), 50)
+        tone = sanitize_input(data.get('tone', 'professional'), 50)
+        audience = sanitize_input(data.get('audience', 'general'), 100)
+        platform = sanitize_input(data.get('platform', 'YouTube'), 50)
+        key_points = [sanitize_input(point, 200) for point in data.get('key_points', [])][:10]  # Limit to 10 points
+        
         session_id = str(uuid.uuid4())
-        use_reasoning = request.get('use_reasoning', False)
+        use_reasoning = data.get('use_reasoning', False)
+        
+        # Track usage
+        update_user_usage(db, current_user.id, ai_calls=1)
+        
+        error_handler.log_business_event("ai_script_generation_started", {
+            "user_id": current_user.id,
+            "topic": topic,
+            "use_reasoning": use_reasoning
+        }, current_user.id)
         
         if use_reasoning:
             response = await openai_client.responses.create(
                 model="gpt-5",
                 reasoning={
-                    "effort": request.get('reasoning_effort', 'medium'),
+                    "effort": data.get('reasoning_effort', 'medium'),
                     "summary": "auto"
                 },
                 input=[{
@@ -580,14 +1029,14 @@ async def generate_script(request: dict, current_user: User = Depends(get_curren
                     "content": f"""
                     Formatting re-enabled
                     
-                    Create a high-quality video script for: {request.get('topic', 'a product demo')}
+                    Create a high-quality video script for: {topic}
                     
                     Requirements:
-                    - Duration: {request.get('duration', '2 minutes')}
-                    - Tone: {request.get('tone', 'professional')}
-                    - Target audience: {request.get('audience', 'general')}
-                    - Platform: {request.get('platform', 'YouTube')}
-                    - Key points: {', '.join(request.get('key_points', []))}
+                    - Duration: {duration}
+                    - Tone: {tone}
+                    - Target audience: {audience}
+                    - Platform: {platform}
+                    - Key points: {', '.join(key_points)}
                     
                     Use advanced reasoning to:
                     1. Analyze the target audience psychology
@@ -610,14 +1059,23 @@ async def generate_script(request: dict, current_user: User = Depends(get_curren
                 if output.type == "reasoning" and hasattr(output, 'summary'):
                     reasoning_summary = output.summary[0].text if output.summary else ""
             
+            performance_monitor.record_ai_call("gpt-5", response.usage.total_tokens)
+            
             log_ai_session(
                 db, session_id, current_user.id, "script_generation", "gpt-5",
-                response.usage.total_tokens, request, {
+                response.usage.total_tokens, data, {
                     "script": script_content,
                     "reasoning_summary": reasoning_summary
                 },
                 reasoning_tokens=response.usage.output_tokens_details.reasoning_tokens if hasattr(response.usage, 'output_tokens_details') else 0
             )
+            
+            error_handler.log_business_event("ai_script_generation_completed", {
+                "user_id": current_user.id,
+                "model": "gpt-5",
+                "tokens": response.usage.total_tokens,
+                "success": True
+            }, current_user.id)
             
             return {
                 "success": True,
@@ -627,20 +1085,24 @@ async def generate_script(request: dict, current_user: User = Depends(get_curren
                 "reasoning_summary": reasoning_summary,
                 "reasoning_tokens": response.usage.output_tokens_details.reasoning_tokens if hasattr(response.usage, 'output_tokens_details') else 0,
                 "response_id": response.id,
-                "enhanced": True
+                "enhanced": True,
+                "usage_info": {
+                    "ai_calls_used": current_user.monthly_ai_calls + 1,
+                    "ai_calls_limit": plan_limits['ai_calls_limit']
+                }
             }
         else:
             # Use standard GPT model for faster generation
             response = await openai_client.responses.create(
                 model="gpt-4.1",
                 input=f"""
-                Create a video script for: {request.get('topic', 'a product demo')}
+                Create a video script for: {topic}
                 
                 Requirements:
-                - Duration: {request.get('duration', '2 minutes')}
-                - Tone: {request.get('tone', 'professional')}
-                - Target audience: {request.get('audience', 'general')}
-                - Key points: {', '.join(request.get('key_points', []))}
+                - Duration: {duration}
+                - Tone: {tone}
+                - Target audience: {audience}
+                - Key points: {', '.join(key_points)}
                 
                 Format the script with clear sections, engaging hooks, and natural transitions.
                 Include timing cues and visual suggestions where appropriate.
@@ -650,10 +1112,19 @@ async def generate_script(request: dict, current_user: User = Depends(get_curren
             
             script_content = response.output_text or "Script generation failed"
             
+            performance_monitor.record_ai_call("gpt-4.1", response.usage.total_tokens)
+            
             log_ai_session(
                 db, session_id, current_user.id, "script_generation", "gpt-4.1",
-                response.usage.total_tokens, request, {"script": script_content}
+                response.usage.total_tokens, data, {"script": script_content}
             )
+            
+            error_handler.log_business_event("ai_script_generation_completed", {
+                "user_id": current_user.id,
+                "model": "gpt-4.1",
+                "tokens": response.usage.total_tokens,
+                "success": True
+            }, current_user.id)
             
             return {
                 "success": True,
@@ -661,18 +1132,36 @@ async def generate_script(request: dict, current_user: User = Depends(get_curren
                 "word_count": len(script_content.split()),
                 "estimated_duration": f"{len(script_content.split()) // 150} minutes",
                 "response_id": response.id,
-                "enhanced": False
+                "enhanced": False,
+                "usage_info": {
+                    "ai_calls_used": current_user.monthly_ai_calls + 1,
+                    "ai_calls_limit": plan_limits['ai_calls_limit']
+                }
             }
+    except HTTPException:
+        raise
     except Exception as e:
+        error_handler.log_error(e, {
+            "endpoint": "/api/generate-script",
+            "user_id": current_user.id,
+            "topic": data.get('topic')
+        })
+        
+        error_handler.log_business_event("ai_script_generation_failed", {
+            "user_id": current_user.id,
+            "error": str(e),
+            "success": False
+        }, current_user.id)
+        
         # Fallback to mock response if API fails
         script_content = f"""
-        Welcome to {request.get('topic', 'our amazing product')}!
+        Welcome to {topic}!
         
-        In this {request.get('duration', '2-minute')} video, we'll explore how our solution can transform your workflow.
+        In this {duration} video, we'll explore how our solution can transform your workflow.
         
-        Our {request.get('tone', 'professional')} approach ensures that you get the best results every time.
+        Our {tone} approach ensures that you get the best results every time.
         
-        Whether you're targeting {request.get('audience', 'professionals')} or expanding your reach, we've got you covered.
+        Whether you're targeting {audience} or expanding your reach, we've got you covered.
         
         Let's dive in and see what makes this special!
         """
@@ -683,8 +1172,58 @@ async def generate_script(request: dict, current_user: User = Depends(get_curren
             "word_count": len(script_content.split()),
             "estimated_duration": f"{len(script_content.split()) // 150} minutes",
             "fallback": True,
-            "error": str(e)
+            "error": str(e),
+            "usage_info": {
+                "ai_calls_used": current_user.monthly_ai_calls + 1,
+                "ai_calls_limit": plan_limits['ai_calls_limit']
+            }
         }
+
+@app.post("/api/upload-media")
+async def upload_media(request: Request, file: UploadFile = File(...)):
+    """Upload media files with security validation"""
+    try:
+        await upload_rate_limiter(request)
+        
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/mov', 'audio/mp3', 'audio/wav']
+        max_file_size = 100 * 1024 * 1024  # 100MB
+        
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="File type not allowed")
+        
+        file_content = await file.read()
+        
+        if len(file_content) > max_file_size:
+            raise HTTPException(status_code=413, detail="File too large")
+        
+        safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '', file.filename or 'upload')
+        
+        file_id = str(uuid.uuid4())
+        file_extension = Path(safe_filename).suffix
+        blob_filename = f"media/{file_id}{file_extension}"
+        
+        # Upload to Vercel Blob
+        blob_response = await put(
+            pathname=blob_filename,
+            body=file_content,
+            options={
+                "access": "public",
+                "contentType": file.content_type
+            }
+        )
+        
+        return {
+            "success": True,
+            "file_id": file_id,
+            "filename": safe_filename,
+            "file_url": blob_response["url"],
+            "file_size": len(file_content),
+            "file_type": file.content_type
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-voiceover")
 async def generate_voiceover(request: dict):
@@ -725,10 +1264,21 @@ async def generate_voiceover(request: dict):
                     with open(audio_path, "wb") as f:
                         f.write(response.content)
                     
+                    # Store audio in Vercel Blob
+                    blob_filename = f"audio/{audio_id}.mp3"
+                    blob_response = await put(
+                        pathname=blob_filename,
+                        body=response.content,
+                        options={
+                            "access": "public",
+                            "contentType": "audio/mpeg"
+                        }
+                    )
+                    
                     return {
                         "success": True,
                         "audio_id": audio_id,
-                        "audio_url": f"/api/audio/{audio_id}",
+                        "audio_url": blob_response["url"],
                         "duration": len(request.get('text', '').split()) * 0.5,  # Estimate
                         "file_size": f"{len(response.content) / 1024 / 1024:.1f} MB",
                         "voice_used": request.get('voice', 'Sarah - Professional')
@@ -752,58 +1302,32 @@ async def generate_voiceover(request: dict):
 
 @app.get("/api/audio/{audio_id}")
 async def get_audio(audio_id: str):
-    """Serve generated audio files"""
+    """Serve generated audio files from Vercel Blob storage"""
     try:
-        audio_dir = Path("audio")
-        audio_path = audio_dir / f"{audio_id}.mp3"
+        blob_url = f"https://blob.vercel-storage.com/{audio_id}.mp3"
         
-        if audio_path.exists():
-            return FileResponse(audio_path, media_type="audio/mpeg")
+        # Verify blob exists by making a HEAD request
+        async with httpx.AsyncClient() as client:
+            response = await client.head(blob_url)
+            if response.status_code == 404:
+                raise HTTPException(status_code=404, detail="Audio file not found")
         
-        raise HTTPException(status_code=404, detail="Audio file not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/upload-media")
-async def upload_media(file: UploadFile = File(...)):
-    """Upload media files for video projects"""
-    try:
-        # Create uploads directory if it doesn't exist
-        upload_dir = Path("uploads")
-        upload_dir.mkdir(exist_ok=True)
-        
-        # Generate unique filename
-        file_id = str(uuid.uuid4())
-        file_extension = Path(file.filename).suffix
-        filename = f"{file_id}{file_extension}"
-        file_path = upload_dir / filename
-        
-        # Save uploaded file
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
-        
-        return {
-            "success": True,
-            "file_id": file_id,
-            "filename": file.filename,
-            "file_url": f"/api/media/{file_id}",
-            "file_size": len(content),
-            "file_type": file.content_type
-        }
+        # Return redirect to blob URL
+        return JSONResponse({"audio_url": blob_url})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/media/{file_id}")
 async def get_media(file_id: str):
-    """Serve uploaded media files"""
+    """Get media file URL from Vercel Blob storage"""
     try:
-        upload_dir = Path("uploads")
-        # Find file with matching ID
-        for file_path in upload_dir.glob(f"{file_id}.*"):
-            return FileResponse(file_path)
+        blobs = await list_blobs(prefix=f"media/{file_id}")
         
-        raise HTTPException(status_code=404, detail="File not found")
+        if not blobs.get("blobs"):
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        blob_url = blobs["blobs"][0]["url"]
+        return JSONResponse({"file_url": blob_url})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -834,6 +1358,8 @@ async def render_video(request: dict, current_user: User = Depends(get_current_u
 async def process_video_render(job_id: str, db: Session):
     """Background task to process video rendering"""
     try:
+        error_handler.log_business_event("render_job_started", {"job_id": job_id})
+        
         # Update status to processing
         update_render_job(db, job_id, status="processing", progress=10, started_at=datetime.utcnow())
         
@@ -859,7 +1385,9 @@ async def process_video_render(job_id: str, db: Session):
                 "current_step": step_name
             })
         
-        # Mark as completed
+        render_time = f"{20.0:.1f} seconds"  # Calculate actual render time
+        project = get_project(db, project_id)
+        
         update_render_job(
             db, job_id, 
             status="completed", 
@@ -869,6 +1397,18 @@ async def process_video_render(job_id: str, db: Session):
             file_size=47185920  # 45.2 MB in bytes
         )
         
+        try:
+            download_url = f"{os.getenv('BACKEND_URL', 'http://localhost:8000')}/api/download/{job_id}"
+            await email_service.send_render_completion_email(
+                user_email=current_user.email,
+                user_name=current_user.full_name or current_user.username,
+                project_name=project.title if project else "Your Video",
+                download_url=download_url,
+                render_time=render_time
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send render completion email: {str(e)}")
+
         await broadcast_job_update(job_id, {
             "id": job_id,
             "status": "completed",
@@ -877,13 +1417,32 @@ async def process_video_render(job_id: str, db: Session):
             "file_size": "45.2 MB"
         })
         
+        performance_monitor.record_render_job("completed", 20.0)  # 20 seconds
+        error_handler.log_business_event("render_job_completed", {"job_id": job_id, "success": True})
+        
     except Exception as e:
         update_render_job(db, job_id, status="failed", error_message=str(e))
+        
+        try:
+            project = get_project(db, project_id)
+            await email_service.send_render_failed_email(
+                user_email=current_user.email,
+                user_name=current_user.full_name or current_user.username,
+                project_name=project.title if project else "Your Video",
+                error_message=str(e)
+            )
+        except Exception as email_error:
+            logger.warning(f"Failed to send render failure email: {str(email_error)}")
+        
         await broadcast_job_update(job_id, {
             "id": job_id,
             "status": "failed",
             "error": str(e)
         })
+        
+        performance_monitor.record_render_job("failed")
+        error_handler.log_error(e, {"job_id": job_id, "context": "video_rendering"})
+        error_handler.log_business_event("render_job_failed", {"job_id": job_id, "error": str(e), "success": False})
 
 @app.get("/api/render-status/{job_id}")
 async def get_render_status(job_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -982,9 +1541,17 @@ async def generate_image(request: dict):
                 with open(image_path, "wb") as f:
                     f.write(image_data)
                 
+                # Store image in Vercel Blob
+                blob_filename = f"images/{image_id}.png"
+                blob_response = await put(
+                    pathname=blob_filename,
+                    body=image_data,
+                    options={"access": "public"}
+                )
+                
                 images.append({
                     "image_id": image_id,
-                    "image_url": f"/api/images/{image_id}",
+                    "image_url": blob_response["url"],
                     "revised_prompt": getattr(output, 'revised_prompt', request.get('prompt')),
                     "size": f"{len(image_data) / 1024:.1f} KB"
                 })
@@ -999,15 +1566,16 @@ async def generate_image(request: dict):
 
 @app.get("/api/images/{image_id}")
 async def get_image(image_id: str):
-    """Serve generated images"""
+    """Serve generated images from Vercel Blob storage"""
     try:
-        image_dir = Path("images")
-        image_path = image_dir / f"{image_id}.png"
+        blob_url = f"https://blob.vercel-storage.com/images/{image_id}.png"
         
-        if image_path.exists():
-            return FileResponse(image_path, media_type="image/png")
+        async with httpx.AsyncClient() as client:
+            response = await client.head(blob_url)
+            if response.status_code == 404:
+                raise HTTPException(status_code=404, detail="Image not found")
         
-        raise HTTPException(status_code=404, detail="Image not found")
+        return JSONResponse({"image_url": blob_url})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1058,24 +1626,42 @@ async def process_data(request: dict):
 
 @app.get("/api/container-file/{container_id}/{file_id}")
 async def get_container_file(container_id: str, file_id: str):
-    """Download files generated by Code Interpreter"""
+    """Download files generated by Code Interpreter and store in Vercel Blob"""
     try:
         file_content = await openai_client.containers.files.content(
             container_id=container_id,
             file_id=file_id
         )
         
-        # Save file temporarily and serve it
-        temp_dir = Path("temp")
-        temp_dir.mkdir(exist_ok=True)
-        temp_path = temp_dir / f"{file_id}"
+        blob_filename = f"container-files/{container_id}/{file_id}"
+        blob_response = await put(
+            pathname=blob_filename,
+            body=file_content,
+            options={"access": "public"}
+        )
         
-        with open(temp_path, "wb") as f:
-            f.write(file_content)
-        
-        return FileResponse(temp_path)
+        return JSONResponse({"file_url": blob_response["url"]})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File retrieval failed: {str(e)}")
+
+@app.post("/api/store-ai-content")
+async def store_ai_content(content_type: str, content: bytes, filename: str):
+    """Store AI-generated content (audio, images) in Vercel Blob"""
+    try:
+        blob_filename = f"{content_type}/{filename}"
+        blob_response = await put(
+            pathname=blob_filename,
+            body=content,
+            options={"access": "public"}
+        )
+        
+        return {
+            "success": True,
+            "file_url": blob_response["url"],
+            "filename": filename
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

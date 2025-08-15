@@ -24,12 +24,27 @@ class User(Base):
     full_name = Column(String)
     is_active = Column(Boolean, default=True)
     is_premium = Column(Boolean, default=False)
+    
+    stripe_customer_id = Column(String, unique=True)
+    stripe_subscription_id = Column(String)
+    subscription_status = Column(String, default="inactive")  # active, inactive, canceled, past_due
+    subscription_plan = Column(String, default="free")  # free, pro, enterprise
+    subscription_period_start = Column(DateTime(timezone=True))
+    subscription_period_end = Column(DateTime(timezone=True))
+    
+    # Usage tracking
+    monthly_ai_calls = Column(Integer, default=0)
+    monthly_render_minutes = Column(Integer, default=0)
+    monthly_storage_gb = Column(Float, default=0.0)
+    usage_reset_date = Column(DateTime(timezone=True))
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     projects = relationship("Project", back_populates="owner")
     render_jobs = relationship("RenderJob", back_populates="user")
+    payments = relationship("Payment", back_populates="user")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -140,6 +155,33 @@ class AISession(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
 
+class Payment(Base):
+    __tablename__ = "payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    stripe_payment_intent_id = Column(String, unique=True)
+    stripe_invoice_id = Column(String)
+    amount = Column(Integer)  # in cents
+    currency = Column(String, default="usd")
+    status = Column(String)  # succeeded, failed, pending, canceled
+    payment_type = Column(String)  # subscription, usage, one_time
+    description = Column(Text)
+    
+    # Usage details for usage-based billing
+    ai_calls_charged = Column(Integer, default=0)
+    render_minutes_charged = Column(Integer, default=0)
+    storage_gb_charged = Column(Float, default=0.0)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    paid_at = Column(DateTime(timezone=True))
+    
+    # Foreign keys
+    user_id = Column(Integer, ForeignKey("users.id"))
+    
+    # Relationships
+    user = relationship("User", back_populates="payments")
+
 # Create all tables
 def create_tables():
     Base.metadata.create_all(bind=engine)
@@ -239,3 +281,59 @@ def log_ai_session(db: Session, session_id: str, user_id: int, session_type: str
     db.commit()
     db.refresh(db_session)
     return db_session
+
+def get_user_by_stripe_customer_id(db: Session, stripe_customer_id: str) -> Optional[User]:
+    return db.query(User).filter(User.stripe_customer_id == stripe_customer_id).first()
+
+def update_user_subscription(db: Session, user_id: int, subscription_data: dict) -> Optional[User]:
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.stripe_subscription_id = subscription_data.get('subscription_id')
+        user.subscription_status = subscription_data.get('status')
+        user.subscription_plan = subscription_data.get('plan')
+        user.subscription_period_start = subscription_data.get('period_start')
+        user.subscription_period_end = subscription_data.get('period_end')
+        user.is_premium = subscription_data.get('status') == 'active'
+        db.commit()
+        db.refresh(user)
+    return user
+
+def create_payment_record(db: Session, user_id: int, payment_data: dict) -> Payment:
+    db_payment = Payment(
+        user_id=user_id,
+        stripe_payment_intent_id=payment_data.get('payment_intent_id'),
+        stripe_invoice_id=payment_data.get('invoice_id'),
+        amount=payment_data.get('amount'),
+        currency=payment_data.get('currency', 'usd'),
+        status=payment_data.get('status'),
+        payment_type=payment_data.get('type'),
+        description=payment_data.get('description'),
+        ai_calls_charged=payment_data.get('ai_calls_charged', 0),
+        render_minutes_charged=payment_data.get('render_minutes_charged', 0),
+        storage_gb_charged=payment_data.get('storage_gb_charged', 0.0)
+    )
+    db.add(db_payment)
+    db.commit()
+    db.refresh(db_payment)
+    return db_payment
+
+def update_user_usage(db: Session, user_id: int, ai_calls: int = 0, render_minutes: int = 0, storage_gb: float = 0.0):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.monthly_ai_calls += ai_calls
+        user.monthly_render_minutes += render_minutes
+        user.monthly_storage_gb += storage_gb
+        db.commit()
+        db.refresh(user)
+    return user
+
+def reset_monthly_usage(db: Session, user_id: int):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.monthly_ai_calls = 0
+        user.monthly_render_minutes = 0
+        user.monthly_storage_gb = 0.0
+        user.usage_reset_date = func.now()
+        db.commit()
+        db.refresh(user)
+    return user
