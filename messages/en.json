@@ -1,0 +1,237 @@
+{
+  "navigation": {
+    "features": "Features",
+    "howItWorks": "How It Works",
+    "pricing": "Pricing",
+    "reviews": "Reviews",
+    "signIn": "Sign In",
+    "startFreeTrial": "Start Free Trial"
+  },
+  "hero": {
+    "badge": "AI-Powered Video Creation",
+    "title": "Create Professional Videos with {aiAutomation}",
+    "aiAutomation": "AI Automation",
+    "description": "Transform your ideas into compelling long-form videos with AI-driven scriptwriting, natural voiceovers, automated editing, and cloud-based rendering.",
+    "startCreating": "Start Creating Now",
+    "watchDemo": "Watch Demo",
+    "stats": {
+      "creators": "10,000+ creators",
+      "rating": "4.9/5 rating",
+      "faster": "10x faster production"
+    }
+  },
+  "features": {
+    "title": "Everything You Need to Create Amazing Videos",
+    "description": "Our AI-powered platform handles every aspect of video production, from script to final render.",
+    "aiScriptwriting": {
+      "title": "AI Scriptwriting",
+      "description": "Generate compelling scripts tailored to your content goals with advanced AI that understands your brand voice."
+    },
+    "naturalVoiceovers": {
+      "title": "Natural Voiceovers",
+      "description": "Choose from dozens of realistic AI voices or clone your own voice for consistent branding across all content."
+    },
+    "automatedEditing": {
+      "title": "Automated Editing",
+      "description": "Smart editing algorithms automatically sync visuals, add transitions, and optimize pacing for maximum engagement."
+    },
+    "cloudRendering": {
+      "title": "Cloud Rendering",
+      "description": "Lightning-fast cloud processing ensures your videos are ready in minutes, not hours, with 4K quality output."
+    },
+    "timelineEditor": {
+      "title": "Timeline Editor",
+      "description": "Fine-tune your videos with our intuitive timeline editor, complete with drag-and-drop functionality and real-time preview."
+    },
+    "teamCollaboration": {
+      "title": "Team Collaboration",
+      "description": "Work together seamlessly with real-time collaboration tools, comments, and approval workflows for team projects."
+    }
+  },
+  "howItWorks": {
+    "title": "From Idea to Video in 4 Simple Steps",
+    "description": "Our streamlined process makes professional video creation accessible to everyone.",
+    "steps": {
+      "inputIdea": {
+        "title": "Input Your Idea",
+        "description": "Describe your video concept, target audience, and key messages in plain English."
+      },
+      "aiGenerates": {
+        "title": "AI Generates Script",
+        "description": "Our AI creates a compelling script optimized for engagement and your specific goals."
+      },
+      "chooseVoice": {
+        "title": "Choose Voice & Style",
+        "description": "Select from premium AI voices and visual styles that match your brand identity."
+      },
+      "renderShare": {
+        "title": "Render & Share",
+        "description": "Your professional video is rendered in the cloud and ready to share across all platforms."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Choose Your Plan",
+    "description": "Start free and scale as you grow. All plans include our core AI features.",
+    "plans": {
+      "free": {
+        "name": "Free",
+        "price": "$0",
+        "period": "/month",
+        "description": "Perfect for getting started",
+        "features": {
+          "videos": "5 videos per month",
+          "quality": "720p video quality",
+          "voices": "Basic AI voices",
+          "templates": "Standard templates"
+        },
+        "cta": "Get Started Free"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$29",
+        "period": "/month",
+        "description": "For serious content creators",
+        "badge": "Most Popular",
+        "features": {
+          "videos": "50 videos per month",
+          "quality": "4K video quality",
+          "voices": "Premium AI voices",
+          "templates": "Advanced templates",
+          "rendering": "Priority rendering",
+          "support": "Email support"
+        },
+        "cta": "Upgrade to Pro"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "$99",
+        "period": "/month",
+        "description": "For teams and agencies",
+        "features": {
+          "videos": "Unlimited videos",
+          "quality": "4K video quality",
+          "voices": "Custom AI voice cloning",
+          "templates": "Custom templates",
+          "collaboration": "Team collaboration",
+          "support": "Priority support",
+          "api": "API access"
+        },
+        "cta": "Contact Sales"
+      }
+    }
+  },
+  "testimonials": {
+    "title": "Trusted by Content Creators Worldwide",
+    "description": "See what our users are saying about their FilmFusion experience.",
+    "reviews": {
+      "sarah": {
+        "name": "Sarah Chen",
+        "role": "Marketing Director",
+        "content": "FilmFusion has revolutionized our content creation process. What used to take weeks now takes hours, and the quality is consistently professional."
+      },
+      "marcus": {
+        "name": "Marcus Rodriguez",
+        "role": "YouTube Creator",
+        "content": "The AI scriptwriting is incredibly smart. It understands my style and creates content that sounds authentically like me. Game changer!"
+      },
+      "emily": {
+        "name": "Emily Watson",
+        "role": "Course Creator",
+        "content": "I've created over 50 educational videos with FilmFusion. The automated editing saves me countless hours while maintaining high production value."
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to Transform Your Video Creation?",
+    "description": "Join thousands of creators who are already using FilmFusion to produce professional videos at scale.",
+    "startTrial": "Start Free Trial",
+    "scheduleDemo": "Schedule Demo"
+  },
+  "footer": {
+    "description": "AI-powered video creation platform for professional long-form content.",
+    "product": {
+      "title": "Product",
+      "features": "Features",
+      "pricing": "Pricing",
+      "api": "API",
+      "integrations": "Integrations"
+    },
+    "company": {
+      "title": "Company",
+      "about": "About",
+      "blog": "Blog",
+      "careers": "Careers",
+      "contact": "Contact"
+    },
+    "support": {
+      "title": "Support",
+      "helpCenter": "Help Center",
+      "documentation": "Documentation",
+      "community": "Community",
+      "status": "Status"
+    },
+    "copyright": "© 2024 FilmFusion. All rights reserved."
+  },
+  "auth": {
+    "signIn": {
+      "title": "Welcome Back",
+      "description": "Sign in to your FilmFusion account",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "signInButton": "Sign In",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signUp": {
+      "title": "Create Your Account",
+      "description": "Start creating professional videos with AI",
+      "name": "Full Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "signUpButton": "Create Account",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "analytics": {
+      "totalProjects": "Total Projects",
+      "completedVideos": "Completed Videos",
+      "totalWatchTime": "Total Watch Time",
+      "avgCompletionRate": "Avg Completion Rate"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "newProject": "New Project",
+      "scriptGenerator": "Script Generator",
+      "voiceoverStudio": "Voiceover Studio",
+      "videoEditor": "Video Editor"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "export": "Export",
+    "import": "Import",
+    "upload": "Upload",
+    "download": "Download"
+  }
+}

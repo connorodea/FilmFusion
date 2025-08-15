@@ -25,7 +25,12 @@ import re
 from database import get_db, create_tables, User, Project, RenderJob, ProjectAnalytics, AISession
 from database import (
     get_user_by_email, get_user_by_username, create_user, get_user_projects, 
-    create_project, update_project, create_render_job, update_render_job, log_ai_session
+    create_project, update_project, create_render_job, update_render_job, log_ai_session,
+    create_support_ticket, get_support_tickets, get_user_tickets, update_ticket_status,
+    assign_ticket, add_ticket_response, get_ticket_responses, get_ticket_stats,
+    create_content_report, get_content_reports, update_report_status, create_moderation_action,
+    get_moderation_actions, create_content_flag, get_content_flags, get_moderation_stats,
+    moderate_content_with_ai, auto_moderate_project
 )
 from auth import verify_password, get_password_hash, create_access_token, verify_token
 
@@ -55,6 +60,7 @@ from email_service import email_service
 import redis
 import os
 from pathlib import Path
+from sqlalchemy import func
 
 app = FastAPI(title="FilmFusion Backend API", version="1.0.0")
 
@@ -231,6 +237,15 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="User not found")
     
     return user
+
+async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """Verify user has admin privileges"""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user
 
 if redis_client:
     # Use Redis for WebSocket connection management
@@ -1179,3 +1194,934 @@ def detect_plan_from_price_id(price_id: str) -> str:
         if plan_config.get('price_id') == price_id:
             return plan_name
     return 'free'  # Default fallback
+
+@app.get("/api/admin/dashboard")
+async def get_admin_dashboard(admin_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    """Get admin dashboard overview"""
+    try:
+        # System statistics
+        system_stats = get_system_stats(db)
+        
+        # Recent activity
+        recent_users = db.query(User).order_by(User.created_at.desc()).limit(5).all()
+        recent_projects = db.query(Project).order_by(Project.created_at.desc()).limit(5).all()
+        recent_renders = db.query(RenderJob).order_by(RenderJob.created_at.desc()).limit(5).all()
+        
+        # Revenue data
+        total_revenue = db.query(func.sum(Payment.amount)).filter(Payment.status == "succeeded").scalar() or 0
+        monthly_revenue = db.query(func.sum(Payment.amount)).filter(
+            Payment.status == "succeeded",
+            Payment.created_at >= func.date_trunc('month', func.now())
+        ).scalar() or 0
+        
+        return {
+            "success": True,
+            "dashboard": {
+                "system_stats": system_stats,
+                "revenue": {
+                    "total": total_revenue / 100,  # Convert from cents
+                    "monthly": monthly_revenue / 100
+                },
+                "recent_activity": {
+                    "users": [{"id": u.id, "username": u.username, "email": u.email, "created_at": u.created_at} for u in recent_users],
+                    "projects": [{"id": p.id, "name": p.name, "status": p.status, "created_at": p.created_at} for p in recent_projects],
+                    "renders": [{"id": r.id, "status": r.status, "created_at": r.created_at} for r in recent_renders]
+                }
+            }
+        }
+    except Exception as e:
+        error_handler.log_error(e, {"endpoint": "/api/admin/dashboard", "admin_id": admin_user.id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/users")
+async def get_all_users_admin(
+    skip: int = 0, 
+    limit: int = 50, 
+    search: str = None,
+    admin_user: User = Depends(get_admin_user), 
+    db: Session = Depends(get_db)
+):
+    """Get all users with pagination and search"""
+    try:
+        users = get_all_users(db, skip=skip, limit=limit, search=search)
+        total_count = get_user_count(db)
+        
+        return {
+            "success": True,
+            "users": [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "is_active": user.is_active,
+                    "is_premium": user.is_premium,
+                    "is_admin": user.is_admin,
+                    "role": user.role,
+                    "subscription_plan": user.subscription_plan,
+                    "subscription_status": user.subscription_status,
+                    "created_at": user.created_at,
+                    "last_login": user.last_login,
+                    "login_count": user.login_count
+                } for user in users
+            ],
+            "pagination": {
+                "total": total_count,
+                "skip": skip,
+                "limit": limit,
+                "has_more": skip + limit < total_count
+            }
+        }
+    except Exception as e:
+        error_handler.log_error(e, {"endpoint": "/api/admin/users", "admin_id": admin_user.id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/users/{user_id}/role")
+async def update_user_role_admin(
+    user_id: int,
+    role_data: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Update user role and permissions"""
+    try:
+        role = role_data.get("role")
+        permissions = role_data.get("permissions", [])
+        
+        if role not in ["user", "admin", "super_admin"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        
+        user = update_user_role(db, user_id, role, permissions)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        error_handler.log_business_event("user_role_updated", {
+            "target_user_id": user_id,
+            "new_role": role,
+            "admin_id": admin_user.id
+        }, admin_user.id)
+        
+        return {
+            "success": True,
+            "message": f"User role updated to {role}",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role,
+                "is_admin": user.is_admin,
+                "permissions": user.permissions
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_handler.log_error(e, {"endpoint": "/api/admin/users/role", "admin_id": admin_user.id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/users/{user_id}/deactivate")
+async def deactivate_user_admin(
+    user_id: int,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Deactivate a user account"""
+    try:
+        user = deactivate_user(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        error_handler.log_business_event("user_deactivated", {
+            "target_user_id": user_id,
+            "admin_id": admin_user.id
+        }, admin_user.id)
+        
+        return {
+            "success": True,
+            "message": "User account deactivated",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "is_active": user.is_active
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_handler.log_error(e, {"endpoint": "/api/admin/users/deactivate", "admin_id": admin_user.id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+def get_system_stats(db: Session):
+    """Get system statistics"""
+    total_users = db.query(User).count()
+    active_users = db.query(User).filter(User.is_active == True).count()
+    total_projects = db.query(Project).count()
+    total_renders = db.query(RenderJob).count()
+    
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "total_projects": total_projects,
+        "total_renders": total_renders
+    }
+
+def get_all_users(db: Session, skip: int = 0, limit: int = 50, search: str = None):
+    """Get all users with pagination and search"""
+    query = db.query(User)
+    
+    if search:
+        query = query.filter(
+            (User.username.ilike(f"%{search}%")) | (User.email.ilike(f"%{search}%"))
+        )
+    
+    return query.offset(skip).limit(limit).all()
+
+def get_user_count(db: Session):
+    """Get total user count"""
+    return db.query(User).count()
+
+def update_user_role(db: Session, user_id: int, role: str, permissions: List[str] = []):
+    """Update user role and permissions"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    
+    user.role = role
+    user.is_admin = role == "admin" or role == "super_admin"
+    user.permissions = permissions
+    db.commit()
+    db.refresh(user)
+    return user
+
+def deactivate_user(db: Session, user_id: int):
+    """Deactivate a user account"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    
+    user.is_active = False
+    db.commit()
+    db.refresh(user)
+    return user
+
+async def send_subscription_welcome_email(email: str, full_name: str, plan_name: str):
+    """Send welcome email after subscription"""
+    try:
+        await email_service.send_subscription_welcome_email(email, full_name, plan_name)
+    except Exception as e:
+        logger.warning(f"Failed to send subscription welcome email to {email}: {str(e)}")
+
+async def send_subscription_cancelled_email(email: str, full_name: str, period_end: datetime):
+    """Send cancellation email"""
+    try:
+        await email_service.send_subscription_cancelled_email(email, full_name, period_end)
+    except Exception as e:
+        logger.warning(f"Failed to send subscription cancelled email to {email}: {str(e)}")
+
+async def send_subscription_ended_email(email: str, full_name: str):
+    """Send subscription ended email"""
+    try:
+        await email_service.send_subscription_ended_email(email, full_name)
+    except Exception as e:
+        logger.warning(f"Failed to send subscription ended email to {email}: {str(e)}")
+
+async def send_payment_receipt_email(email: str, full_name: str, amount: float, description: str):
+    """Send payment receipt email"""
+    try:
+        await email_service.send_payment_receipt_email(email, full_name, amount, description)
+    except Exception as e:
+        logger.warning(f"Failed to send payment receipt email to {email}: {str(e)}")
+
+async def send_payment_failed_email(email: str, full_name: str, amount: float, invoice_url: str):
+    """Send payment failed email"""
+    try:
+        await email_service.send_payment_failed_email(email, full_name, amount, invoice_url)
+    except Exception as e:
+        logger.warning(f"Failed to send payment failed email to {email}: {str(e)}")
+
+async def send_trial_ending_email(email: str, full_name: str, trial_end: datetime):
+    """Send trial ending email"""
+    try:
+        await email_service.send_trial_ending_email(email, full_name, trial_end)
+    except Exception as e:
+        logger.warning(f"Failed to send trial ending email to {email}: {str(e)}")
+
+async def send_upcoming_invoice_email(email: str, full_name: str, amount: float, due_date: datetime):
+    """Send upcoming invoice email"""
+    try:
+        await email_service.send_upcoming_invoice_email(email, full_name, amount, due_date)
+    except Exception as e:
+        logger.warning(f"Failed to send upcoming invoice email to {email}: {str(e)}")
+
+@app.post("/api/support/tickets")
+async def create_ticket(request: dict, db: Session = Depends(get_db)):
+    """Create a new support ticket"""
+    try:
+        # Get user info if authenticated
+        user_id = None
+        user_name = None
+        try:
+            token = request.get('token')
+            if token:
+                payload = verify_token(token)
+                if payload:
+                    user_id = int(payload.get('sub'))
+                    user = db.query(User).filter(User.id == user_id).first()
+                    if user:
+                        user_name = user.full_name or user.username
+        except:
+            pass  # Continue as anonymous user
+        
+        ticket_data = {
+            'subject': request.get('subject'),
+            'description': request.get('description'),
+            'category': request.get('category', 'general'),
+            'priority': request.get('priority', 'medium'),
+            'user_email': request.get('email'),
+            'user_name': user_name or request.get('name'),
+            'user_id': user_id
+        }
+        
+        if not ticket_data['subject'] or not ticket_data['description'] or not ticket_data['user_email']:
+            raise HTTPException(status_code=400, detail="Subject, description, and email are required")
+        
+        ticket = create_support_ticket(db, ticket_data)
+        
+        # Send confirmation email
+        try:
+            await email_service.send_ticket_created_email(
+                ticket.user_email,
+                ticket.user_name or "User",
+                ticket.ticket_number,
+                ticket.subject
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send ticket confirmation email: {str(e)}")
+        
+        return {
+            "success": True,
+            "ticket": {
+                "id": ticket.id,
+                "ticket_number": ticket.ticket_number,
+                "subject": ticket.subject,
+                "status": ticket.status,
+                "created_at": ticket.created_at.isoformat()
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/support/tickets")
+async def get_user_support_tickets(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get current user's support tickets"""
+    try:
+        tickets = get_user_tickets(db, current_user.id)
+        
+        return {
+            "success": True,
+            "tickets": [
+                {
+                    "id": ticket.id,
+                    "ticket_number": ticket.ticket_number,
+                    "subject": ticket.subject,
+                    "category": ticket.category,
+                    "priority": ticket.priority,
+                    "status": ticket.status,
+                    "created_at": ticket.created_at.isoformat(),
+                    "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+                    "last_response_at": ticket.last_response_at.isoformat() if ticket.last_response_at else None
+                } for ticket in tickets
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/support/tickets/{ticket_id}")
+async def get_ticket_details(ticket_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get ticket details and responses"""
+    try:
+        ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        
+        # Check if user owns the ticket or is admin
+        if ticket.user_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        responses = get_ticket_responses(db, ticket_id, include_internal=current_user.is_admin)
+        
+        return {
+            "success": True,
+            "ticket": {
+                "id": ticket.id,
+                "ticket_number": ticket.ticket_number,
+                "subject": ticket.subject,
+                "description": ticket.description,
+                "category": ticket.category,
+                "priority": ticket.priority,
+                "status": ticket.status,
+                "created_at": ticket.created_at.isoformat(),
+                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+                "resolution_notes": ticket.resolution_notes,
+                "assigned_to": ticket.assigned_to.username if ticket.assigned_to else None
+            },
+            "responses": [
+                {
+                    "id": response.id,
+                    "message": response.message,
+                    "is_from_admin": response.is_from_admin,
+                    "is_internal": response.is_internal,
+                    "author": response.author.username if response.author else "System",
+                    "created_at": response.created_at.isoformat(),
+                    "attachment_urls": response.attachment_urls
+                } for response in responses
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/support/tickets/{ticket_id}/responses")
+async def add_response_to_ticket(ticket_id: int, request: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Add a response to a ticket"""
+    try:
+        ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        
+        # Check if user owns the ticket or is admin
+        if ticket.user_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        response_data = {
+            'ticket_id': ticket_id,
+            'message': request.get('message'),
+            'is_internal': request.get('is_internal', False) and current_user.is_admin,
+            'is_from_admin': current_user.is_admin,
+            'author_id': current_user.id,
+            'attachment_urls': request.get('attachment_urls', [])
+        }
+        
+        if not response_data['message']:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        response = add_ticket_response(db, response_data)
+        
+        # Send email notification
+        try:
+            if current_user.is_admin and not response_data['is_internal']:
+                # Admin responding to user
+                await email_service.send_ticket_response_email(
+                    ticket.user_email,
+                    ticket.user_name or "User",
+                    ticket.ticket_number,
+                    ticket.subject,
+                    response_data['message']
+                )
+            elif not current_user.is_admin:
+                # User responding - notify admins
+                await email_service.send_ticket_update_notification(
+                    ticket.ticket_number,
+                    ticket.subject,
+                    f"New response from {current_user.username}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to send ticket response email: {str(e)}")
+        
+        return {
+            "success": True,
+            "response": {
+                "id": response.id,
+                "message": response.message,
+                "created_at": response.created_at.isoformat()
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/support/tickets")
+async def get_all_support_tickets(
+    skip: int = 0,
+    limit: int = 50,
+    status: str = None,
+    category: str = None,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get all support tickets for admin"""
+    try:
+        tickets = get_support_tickets(db, skip=skip, limit=limit, status=status, category=category)
+        stats = get_ticket_stats(db)
+        
+        return {
+            "success": True,
+            "tickets": [
+                {
+                    "id": ticket.id,
+                    "ticket_number": ticket.ticket_number,
+                    "subject": ticket.subject,
+                    "category": ticket.category,
+                    "priority": ticket.priority,
+                    "status": ticket.status,
+                    "user_email": ticket.user_email,
+                    "user_name": ticket.user_name,
+                    "assigned_to": ticket.assigned_to.username if ticket.assigned_to else None,
+                    "created_at": ticket.created_at.isoformat(),
+                    "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+                    "last_response_at": ticket.last_response_at.isoformat() if ticket.last_response_at else None
+                } for ticket in tickets
+            ],
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/support/tickets/{ticket_id}/status")
+async def update_support_ticket_status(
+    ticket_id: int,
+    request: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Update ticket status"""
+    try:
+        status = request.get('status')
+        resolution_notes = request.get('resolution_notes')
+        
+        if status not in ['open', 'in_progress', 'waiting_response', 'resolved', 'closed']:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        ticket = update_ticket_status(db, ticket_id, status, resolution_notes)
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        
+        # Send notification email
+        try:
+            if status in ['resolved', 'closed']:
+                await email_service.send_ticket_resolved_email(
+                    ticket.user_email,
+                    ticket.user_name or "User",
+                    ticket.ticket_number,
+                    ticket.subject,
+                    resolution_notes or "Your ticket has been resolved."
+                )
+        except Exception as e:
+            logger.warning(f"Failed to send ticket resolution email: {str(e)}")
+        
+        return {
+            "success": True,
+            "ticket": {
+                "id": ticket.id,
+                "status": ticket.status,
+                "resolution_notes": ticket.resolution_notes,
+                "resolved_at": ticket.resolved_at.isoformat() if ticket.resolved_at else None
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/support/tickets/{ticket_id}/assign")
+async def assign_support_ticket(
+    ticket_id: int,
+    request: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Assign ticket to an admin"""
+    try:
+        admin_id = request.get('admin_id')
+        
+        if not admin_id:
+            raise HTTPException(status_code=400, detail="Admin ID is required")
+        
+        # Verify the admin exists and is actually an admin
+        target_admin = db.query(User).filter(User.id == admin_id, User.is_admin == True).first()
+        if not target_admin:
+            raise HTTPException(status_code=400, detail="Invalid admin ID")
+        
+        ticket = assign_ticket(db, ticket_id, admin_id)
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        
+        return {
+            "success": True,
+            "ticket": {
+                "id": ticket.id,
+                "assigned_to": ticket.assigned_to.username,
+                "status": ticket.status
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/content/report")
+async def report_content(request: dict, db: Session = Depends(get_db)):
+    """Report inappropriate content"""
+    try:
+        # Get user info if authenticated
+        user_id = None
+        reporter_ip = None
+        try:
+            token = request.get('token')
+            if token:
+                payload = verify_token(token)
+                if payload:
+                    user_id = int(payload.get('sub'))
+        except:
+            pass  # Continue as anonymous report
+        
+        report_data = {
+            'report_type': request.get('report_type'),
+            'content_id': request.get('content_id'),
+            'content_type': request.get('content_type'),
+            'reason': request.get('reason'),
+            'description': request.get('description'),
+            'severity': request.get('severity', 'medium'),
+            'reporter_id': user_id,
+            'reporter_email': request.get('reporter_email'),
+            'reporter_ip': request.get('reporter_ip')
+        }
+        
+        # Validate required fields
+        required_fields = ['report_type', 'content_id', 'content_type', 'reason']
+        for field in required_fields:
+            if not report_data.get(field):
+                raise HTTPException(status_code=400, detail=f"{field} is required")
+        
+        # Validate content exists
+        if report_data['content_type'] == 'project':
+            content = db.query(Project).filter(Project.id == report_data['content_id']).first()
+            if not content:
+                raise HTTPException(status_code=404, detail="Content not found")
+        elif report_data['content_type'] == 'user':
+            content = db.query(User).filter(User.id == report_data['content_id']).first()
+            if not content:
+                raise HTTPException(status_code=404, detail="User not found")
+        
+        report = create_content_report(db, report_data)
+        
+        # Send notification to moderators
+        try:
+            await email_service.send_content_report_notification(
+                report.id,
+                report.content_type,
+                report.reason,
+                report.description or "No additional details provided"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send content report notification: {str(e)}")
+        
+        return {
+            "success": True,
+            "report": {
+                "id": report.id,
+                "status": report.status,
+                "created_at": report.created_at.isoformat()
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/moderation/reports")
+async def get_moderation_reports(
+    skip: int = 0,
+    limit: int = 50,
+    status: str = None,
+    severity: str = None,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get content reports for moderation"""
+    try:
+        reports = get_content_reports(db, skip=skip, limit=limit, status=status, severity=severity)
+        stats = get_moderation_stats(db)
+        
+        # Enrich reports with content details
+        enriched_reports = []
+        for report in reports:
+            report_dict = {
+                "id": report.id,
+                "report_type": report.report_type,
+                "content_id": report.content_id,
+                "content_type": report.content_type,
+                "reason": report.reason,
+                "description": report.description,
+                "severity": report.severity,
+                "status": report.status,
+                "reporter_email": report.reporter_email,
+                "reporter": report.reporter.username if report.reporter else "Anonymous",
+                "reviewed_by": report.reviewed_by.username if report.reviewed_by else None,
+                "resolution": report.resolution,
+                "resolution_notes": report.resolution_notes,
+                "created_at": report.created_at.isoformat(),
+                "reviewed_at": report.reviewed_at.isoformat() if report.reviewed_at else None
+            }
+            
+            # Add content details
+            if report.content_type == 'project':
+                project = db.query(Project).filter(Project.id == report.content_id).first()
+                if project:
+                    report_dict['content_details'] = {
+                        'title': project.name,
+                        'description': project.description,
+                        'owner': project.owner.username if project.owner else 'Unknown'
+                    }
+            elif report.content_type == 'user':
+                user = db.query(User).filter(User.id == report.content_id).first()
+                if user:
+                    report_dict['content_details'] = {
+                        'username': user.username,
+                        'email': user.email,
+                        'full_name': user.full_name
+                    }
+            
+            enriched_reports.append(report_dict)
+        
+        return {
+            "success": True,
+            "reports": enriched_reports,
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/moderation/reports/{report_id}")
+async def resolve_content_report(
+    report_id: int,
+    request: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Resolve a content report"""
+    try:
+        status = request.get('status')
+        resolution = request.get('resolution')
+        resolution_notes = request.get('resolution_notes')
+        
+        if status not in ['pending', 'under_review', 'resolved', 'dismissed']:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        report = update_report_status(
+            db, report_id, status, resolution, resolution_notes, admin_user.id
+        )
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        # If taking action, create moderation action
+        if resolution and resolution != 'no_action':
+            action_data = {
+                'action_type': resolution,
+                'target_type': report.content_type,
+                'target_id': report.content_id,
+                'reason': f"Content report resolution: {report.reason}",
+                'description': resolution_notes,
+                'moderator_id': admin_user.id,
+                'related_report_id': report.id
+            }
+            
+            # Apply the moderation action
+            if resolution == 'content_removed':
+                await apply_content_removal(db, report.content_type, report.content_id)
+            elif resolution == 'user_warned':
+                await apply_user_warning(db, report.content_id, resolution_notes)
+            elif resolution == 'user_suspended':
+                duration = request.get('suspension_duration', 24)  # Default 24 hours
+                action_data['duration'] = duration
+                await apply_user_suspension(db, report.content_id, duration, resolution_notes)
+            
+            create_moderation_action(db, action_data)
+        
+        return {
+            "success": True,
+            "report": {
+                "id": report.id,
+                "status": report.status,
+                "resolution": report.resolution,
+                "resolved_at": report.reviewed_at.isoformat() if report.reviewed_at else None
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/moderation/actions")
+async def get_moderation_actions_list(
+    skip: int = 0,
+    limit: int = 50,
+    target_type: str = None,
+    status: str = None,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get moderation actions"""
+    try:
+        actions = get_moderation_actions(db, skip=skip, limit=limit, target_type=target_type, status=status)
+        
+        return {
+            "success": True,
+            "actions": [
+                {
+                    "id": action.id,
+                    "action_type": action.action_type,
+                    "target_type": action.target_type,
+                    "target_id": action.target_id,
+                    "reason": action.reason,
+                    "description": action.description,
+                    "severity": action.severity,
+                    "duration": action.duration,
+                    "status": action.status,
+                    "moderator": action.moderator.username,
+                    "expires_at": action.expires_at.isoformat() if action.expires_at else None,
+                    "created_at": action.created_at.isoformat(),
+                    "revoked_at": action.revoked_at.isoformat() if action.revoked_at else None,
+                    "revoked_by": action.revoked_by.username if action.revoked_by else None
+                } for action in actions
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/moderation/flags")
+async def get_content_flags_list(
+    skip: int = 0,
+    limit: int = 50,
+    status: str = None,
+    flag_type: str = None,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get content flags"""
+    try:
+        flags = get_content_flags(db, skip=skip, limit=limit, status=status, flag_type=flag_type)
+        
+        enriched_flags = []
+        for flag in flags:
+            flag_dict = {
+                "id": flag.id,
+                "content_type": flag.content_type,
+                "content_id": flag.content_id,
+                "flag_type": flag.flag_type,
+                "flag_reason": flag.flag_reason,
+                "confidence_score": flag.confidence_score,
+                "status": flag.status,
+                "flagged_by_system": flag.flagged_by_system,
+                "flagged_by_user": flag.flagged_by_user.username if flag.flagged_by_user else None,
+                "reviewed_by": flag.reviewed_by.username if flag.reviewed_by else None,
+                "review_notes": flag.review_notes,
+                "created_at": flag.created_at.isoformat(),
+                "reviewed_at": flag.reviewed_at.isoformat() if flag.reviewed_at else None
+            }
+            
+            # Add content preview
+            if flag.content_type == 'project':
+                project = db.query(Project).filter(Project.id == flag.content_id).first()
+                if project:
+                    flag_dict['content_preview'] = {
+                        'title': project.name,
+                        'description': project.description[:200] + '...' if project.description and len(project.description) > 200 else project.description
+                    }
+            
+            enriched_flags.append(flag_dict)
+        
+        return {
+            "success": True,
+            "flags": enriched_flags
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/admin/moderation/scan-content")
+async def scan_content_for_moderation(
+    request: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Manually trigger content scanning"""
+    try:
+        content_type = request.get('content_type', 'all')
+        limit = request.get('limit', 100)
+        
+        scanned_count = 0
+        flagged_count = 0
+        
+        if content_type in ['all', 'projects']:
+            # Scan recent projects
+            projects = db.query(Project).order_by(Project.created_at.desc()).limit(limit).all()
+            
+            for project in projects:
+                # Check if already flagged
+                existing_flag = db.query(ContentFlag).filter(
+                    ContentFlag.content_type == 'project',
+                    ContentFlag.content_id == project.id,
+                    ContentFlag.status == 'active'
+                ).first()
+                
+                if not existing_flag:
+                    flag = auto_moderate_project(db, project)
+                    if flag:
+                        flagged_count += 1
+                    scanned_count += 1
+        
+        return {
+            "success": True,
+            "scanned_count": scanned_count,
+            "flagged_count": flagged_count,
+            "message": f"Scanned {scanned_count} items, flagged {flagged_count} for review"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def apply_content_removal(db: Session, content_type: str, content_id: int):
+    """Apply content removal action"""
+    try:
+        if content_type == 'project':
+            project = db.query(Project).filter(Project.id == content_id).first()
+            if project:
+                project.status = 'removed'
+                db.commit()
+        # Add other content types as needed
+    except Exception as e:
+        logger.error(f"Failed to remove content {content_type}:{content_id}: {str(e)}")
+
+async def apply_user_warning(db: Session, user_id: int, warning_message: str):
+    """Apply user warning"""
+    try:
+        # Could send email notification or add to user's record
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            await email_service.send_user_warning_email(
+                user.email,
+                user.full_name or user.username,
+                warning_message
+            )
+    except Exception as e:
+        logger.error(f"Failed to warn user {user_id}: {str(e)}")
+
+async def apply_user_suspension(db: Session, user_id: int, duration_hours: int, reason: str):
+    """Apply user suspension"""
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            user.is_active = False
+            db.commit()
+            
+            await email_service.send_user_suspension_email(
+                user.email,
+                user.full_name or user.username,
+                duration_hours,
+                reason
+            )
+    except Exception as e:
+        logger.error(f"Failed to suspend user {user_id}: {str(e)}")

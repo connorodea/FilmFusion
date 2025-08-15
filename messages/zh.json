@@ -1,0 +1,237 @@
+{
+  "navigation": {
+    "features": "功能",
+    "howItWorks": "工作原理",
+    "pricing": "定价",
+    "reviews": "评价",
+    "signIn": "登录",
+    "startFreeTrial": "开始免费试用"
+  },
+  "hero": {
+    "badge": "AI驱动的视频创作",
+    "title": "使用{aiAutomation}创建专业视频",
+    "aiAutomation": "AI自动化",
+    "description": "通过AI驱动的脚本编写、自然语音、自动编辑和云端渲染，将您的想法转化为引人入胜的长视频。",
+    "startCreating": "立即开始创作",
+    "watchDemo": "观看演示",
+    "stats": {
+      "creators": "10,000+ 创作者",
+      "rating": "4.9/5 评分",
+      "faster": "10倍更快的制作"
+    }
+  },
+  "features": {
+    "title": "创建精彩视频所需的一切",
+    "description": "我们的AI驱动平台处理视频制作的每个方面，从脚本到最终渲染。",
+    "aiScriptwriting": {
+      "title": "AI脚本编写",
+      "description": "使用理解您品牌声音的先进AI生成针对您内容目标量身定制的引人入胜的脚本。"
+    },
+    "naturalVoiceovers": {
+      "title": "自然语音",
+      "description": "从数十种逼真的AI语音中选择，或克隆您自己的语音，在所有内容中保持一致的品牌形象。"
+    },
+    "automatedEditing": {
+      "title": "自动编辑",
+      "description": "智能编辑算法自动同步视觉效果，添加转场，并优化节奏以获得最大参与度。"
+    },
+    "cloudRendering": {
+      "title": "云端渲染",
+      "description": "闪电般快速的云处理确保您的视频在几分钟内准备就绪，而不是几小时，输出4K质量。"
+    },
+    "timelineEditor": {
+      "title": "时间轴编辑器",
+      "description": "使用我们直观的时间轴编辑器精细调整您的视频，具有拖放功能和实时预览。"
+    },
+    "teamCollaboration": {
+      "title": "团队协作",
+      "description": "通过实时协作工具、评论和团队项目的审批工作流程无缝协作。"
+    }
+  },
+  "howItWorks": {
+    "title": "4个简单步骤从想法到视频",
+    "description": "我们简化的流程使专业视频创作对每个人都可及。",
+    "steps": {
+      "inputIdea": {
+        "title": "输入您的想法",
+        "description": "用简单的中文描述您的视频概念、目标受众和关键信息。"
+      },
+      "aiGenerates": {
+        "title": "AI生成脚本",
+        "description": "我们的AI创建针对参与度和您特定目标优化的引人入胜的脚本。"
+      },
+      "chooseVoice": {
+        "title": "选择语音和风格",
+        "description": "从与您品牌身份匹配的高级AI语音和视觉风格中选择。"
+      },
+      "renderShare": {
+        "title": "渲染和分享",
+        "description": "您的专业视频在云端渲染，准备在所有平台上分享。"
+      }
+    }
+  },
+  "pricing": {
+    "title": "选择您的计划",
+    "description": "免费开始，随着成长而扩展。所有计划都包含我们的核心AI功能。",
+    "plans": {
+      "free": {
+        "name": "免费",
+        "price": "¥0",
+        "period": "/月",
+        "description": "完美的入门选择",
+        "features": {
+          "videos": "每月5个视频",
+          "quality": "720p视频质量",
+          "voices": "基础AI语音",
+          "templates": "标准模板"
+        },
+        "cta": "免费开始"
+      },
+      "pro": {
+        "name": "专业版",
+        "price": "¥199",
+        "period": "/月",
+        "description": "适合认真的内容创作者",
+        "badge": "最受欢迎",
+        "features": {
+          "videos": "每月50个视频",
+          "quality": "4K视频质量",
+          "voices": "高级AI语音",
+          "templates": "高级模板",
+          "rendering": "优先渲染",
+          "support": "邮件支持"
+        },
+        "cta": "升级到专业版"
+      },
+      "enterprise": {
+        "name": "企业版",
+        "price": "¥699",
+        "period": "/月",
+        "description": "适合团队和机构",
+        "features": {
+          "videos": "无限视频",
+          "quality": "4K视频质量",
+          "voices": "自定义AI语音克隆",
+          "templates": "自定义模板",
+          "collaboration": "团队协作",
+          "support": "优先支持",
+          "api": "API访问"
+        },
+        "cta": "联系销售"
+      }
+    }
+  },
+  "testimonials": {
+    "title": "受到全球内容创作者的信赖",
+    "description": "看看我们的用户对FilmFusion体验的评价。",
+    "reviews": {
+      "sarah": {
+        "name": "陈莎拉",
+        "role": "营销总监",
+        "content": "FilmFusion彻底改变了我们的内容创作流程。过去需要几周的工作现在只需几小时，质量始终保持专业水准。"
+      },
+      "marcus": {
+        "name": "马库斯·罗德里格斯",
+        "role": "YouTube创作者",
+        "content": "AI脚本编写非常智能。它理解我的风格，创建听起来真正像我的内容。改变游戏规则！"
+      },
+      "emily": {
+        "name": "艾米丽·沃森",
+        "role": "课程创作者",
+        "content": "我用FilmFusion创建了50多个教育视频。自动编辑为我节省了无数小时，同时保持高制作价值。"
+      }
+    }
+  },
+  "cta": {
+    "title": "准备好改变您的视频创作了吗？",
+    "description": "加入已经在使用FilmFusion大规模制作专业视频的数千名创作者。",
+    "startTrial": "开始免费试用",
+    "scheduleDemo": "安排演示"
+  },
+  "footer": {
+    "description": "专业长视频内容的AI驱动视频创作平台。",
+    "product": {
+      "title": "产品",
+      "features": "功能",
+      "pricing": "定价",
+      "api": "API",
+      "integrations": "集成"
+    },
+    "company": {
+      "title": "公司",
+      "about": "关于我们",
+      "blog": "博客",
+      "careers": "职业",
+      "contact": "联系"
+    },
+    "support": {
+      "title": "支持",
+      "helpCenter": "帮助中心",
+      "documentation": "文档",
+      "community": "社区",
+      "status": "状态"
+    },
+    "copyright": "© 2024 FilmFusion. 保留所有权利。"
+  },
+  "auth": {
+    "signIn": {
+      "title": "欢迎回来",
+      "description": "登录您的FilmFusion账户",
+      "email": "邮箱",
+      "password": "密码",
+      "forgotPassword": "忘记密码？",
+      "signInButton": "登录",
+      "noAccount": "没有账户？",
+      "signUp": "注册"
+    },
+    "signUp": {
+      "title": "创建您的账户",
+      "description": "开始使用AI创建专业视频",
+      "name": "全名",
+      "email": "邮箱",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "signUpButton": "创建账户",
+      "hasAccount": "已有账户？",
+      "signIn": "登录"
+    }
+  },
+  "dashboard": {
+    "welcome": "欢迎回来",
+    "analytics": {
+      "totalProjects": "总项目数",
+      "completedVideos": "已完成视频",
+      "totalWatchTime": "总观看时间",
+      "avgCompletionRate": "平均完成率"
+    },
+    "quickActions": {
+      "title": "快速操作",
+      "newProject": "新项目",
+      "scriptGenerator": "脚本生成器",
+      "voiceoverStudio": "配音工作室",
+      "videoEditor": "视频编辑器"
+    }
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "retry": "重试",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "update": "更新",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "search": "搜索",
+    "filter": "筛选",
+    "sort": "排序",
+    "export": "导出",
+    "import": "导入",
+    "upload": "上传",
+    "download": "下载"
+  }
+}

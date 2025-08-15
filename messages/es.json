@@ -1,0 +1,237 @@
+{
+  "navigation": {
+    "features": "Características",
+    "howItWorks": "Cómo Funciona",
+    "pricing": "Precios",
+    "reviews": "Reseñas",
+    "signIn": "Iniciar Sesión",
+    "startFreeTrial": "Comenzar Prueba Gratuita"
+  },
+  "hero": {
+    "badge": "Creación de Videos con IA",
+    "title": "Crea Videos Profesionales con {aiAutomation}",
+    "aiAutomation": "Automatización IA",
+    "description": "Transforma tus ideas en videos largos convincentes con guiones impulsados por IA, voces naturales, edición automatizada y renderizado en la nube.",
+    "startCreating": "Comenzar a Crear Ahora",
+    "watchDemo": "Ver Demo",
+    "stats": {
+      "creators": "10,000+ creadores",
+      "rating": "4.9/5 calificación",
+      "faster": "10x producción más rápida"
+    }
+  },
+  "features": {
+    "title": "Todo lo que Necesitas para Crear Videos Increíbles",
+    "description": "Nuestra plataforma impulsada por IA maneja cada aspecto de la producción de video, desde el guión hasta el renderizado final.",
+    "aiScriptwriting": {
+      "title": "Guiones con IA",
+      "description": "Genera guiones convincentes adaptados a tus objetivos de contenido con IA avanzada que entiende la voz de tu marca."
+    },
+    "naturalVoiceovers": {
+      "title": "Voces Naturales",
+      "description": "Elige entre docenas de voces IA realistas o clona tu propia voz para una marca consistente en todo el contenido."
+    },
+    "automatedEditing": {
+      "title": "Edición Automatizada",
+      "description": "Los algoritmos de edición inteligente sincronizan automáticamente las imágenes, agregan transiciones y optimizan el ritmo para máximo engagement."
+    },
+    "cloudRendering": {
+      "title": "Renderizado en la Nube",
+      "description": "El procesamiento ultrarrápido en la nube asegura que tus videos estén listos en minutos, no horas, con salida de calidad 4K."
+    },
+    "timelineEditor": {
+      "title": "Editor de Línea de Tiempo",
+      "description": "Ajusta finamente tus videos con nuestro editor intuitivo de línea de tiempo, completo con funcionalidad de arrastrar y soltar y vista previa en tiempo real."
+    },
+    "teamCollaboration": {
+      "title": "Colaboración en Equipo",
+      "description": "Trabaja juntos sin problemas con herramientas de colaboración en tiempo real, comentarios y flujos de trabajo de aprobación para proyectos de equipo."
+    }
+  },
+  "howItWorks": {
+    "title": "De la Idea al Video en 4 Pasos Simples",
+    "description": "Nuestro proceso simplificado hace que la creación de videos profesionales sea accesible para todos.",
+    "steps": {
+      "inputIdea": {
+        "title": "Ingresa tu Idea",
+        "description": "Describe tu concepto de video, audiencia objetivo y mensajes clave en español simple."
+      },
+      "aiGenerates": {
+        "title": "IA Genera el Guión",
+        "description": "Nuestra IA crea un guión convincente optimizado para el engagement y tus objetivos específicos."
+      },
+      "chooseVoice": {
+        "title": "Elige Voz y Estilo",
+        "description": "Selecciona entre voces IA premium y estilos visuales que coincidan con la identidad de tu marca."
+      },
+      "renderShare": {
+        "title": "Renderizar y Compartir",
+        "description": "Tu video profesional se renderiza en la nube y está listo para compartir en todas las plataformas."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Elige tu Plan",
+    "description": "Comienza gratis y escala a medida que creces. Todos los planes incluyen nuestras características principales de IA.",
+    "plans": {
+      "free": {
+        "name": "Gratuito",
+        "price": "$0",
+        "period": "/mes",
+        "description": "Perfecto para comenzar",
+        "features": {
+          "videos": "5 videos por mes",
+          "quality": "Calidad de video 720p",
+          "voices": "Voces IA básicas",
+          "templates": "Plantillas estándar"
+        },
+        "cta": "Comenzar Gratis"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$29",
+        "period": "/mes",
+        "description": "Para creadores de contenido serios",
+        "badge": "Más Popular",
+        "features": {
+          "videos": "50 videos por mes",
+          "quality": "Calidad de video 4K",
+          "voices": "Voces IA premium",
+          "templates": "Plantillas avanzadas",
+          "rendering": "Renderizado prioritario",
+          "support": "Soporte por email"
+        },
+        "cta": "Actualizar a Pro"
+      },
+      "enterprise": {
+        "name": "Empresarial",
+        "price": "$99",
+        "period": "/mes",
+        "description": "Para equipos y agencias",
+        "features": {
+          "videos": "Videos ilimitados",
+          "quality": "Calidad de video 4K",
+          "voices": "Clonación de voz IA personalizada",
+          "templates": "Plantillas personalizadas",
+          "collaboration": "Colaboración en equipo",
+          "support": "Soporte prioritario",
+          "api": "Acceso API"
+        },
+        "cta": "Contactar Ventas"
+      }
+    }
+  },
+  "testimonials": {
+    "title": "Confiado por Creadores de Contenido en Todo el Mundo",
+    "description": "Ve lo que nuestros usuarios dicen sobre su experiencia con FilmFusion.",
+    "reviews": {
+      "sarah": {
+        "name": "Sarah Chen",
+        "role": "Directora de Marketing",
+        "content": "FilmFusion ha revolucionado nuestro proceso de creación de contenido. Lo que solía tomar semanas ahora toma horas, y la calidad es consistentemente profesional."
+      },
+      "marcus": {
+        "name": "Marcus Rodriguez",
+        "role": "Creador de YouTube",
+        "content": "La escritura de guiones con IA es increíblemente inteligente. Entiende mi estilo y crea contenido que suena auténticamente como yo. ¡Un cambio de juego!"
+      },
+      "emily": {
+        "name": "Emily Watson",
+        "role": "Creadora de Cursos",
+        "content": "He creado más de 50 videos educativos con FilmFusion. La edición automatizada me ahorra incontables horas mientras mantiene un alto valor de producción."
+      }
+    }
+  },
+  "cta": {
+    "title": "¿Listo para Transformar tu Creación de Videos?",
+    "description": "Únete a miles de creadores que ya están usando FilmFusion para producir videos profesionales a escala.",
+    "startTrial": "Comenzar Prueba Gratuita",
+    "scheduleDemo": "Programar Demo"
+  },
+  "footer": {
+    "description": "Plataforma de creación de videos impulsada por IA para contenido profesional de formato largo.",
+    "product": {
+      "title": "Producto",
+      "features": "Características",
+      "pricing": "Precios",
+      "api": "API",
+      "integrations": "Integraciones"
+    },
+    "company": {
+      "title": "Empresa",
+      "about": "Acerca de",
+      "blog": "Blog",
+      "careers": "Carreras",
+      "contact": "Contacto"
+    },
+    "support": {
+      "title": "Soporte",
+      "helpCenter": "Centro de Ayuda",
+      "documentation": "Documentación",
+      "community": "Comunidad",
+      "status": "Estado"
+    },
+    "copyright": "© 2024 FilmFusion. Todos los derechos reservados."
+  },
+  "auth": {
+    "signIn": {
+      "title": "Bienvenido de Vuelta",
+      "description": "Inicia sesión en tu cuenta de FilmFusion",
+      "email": "Email",
+      "password": "Contraseña",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signInButton": "Iniciar Sesión",
+      "noAccount": "¿No tienes una cuenta?",
+      "signUp": "Registrarse"
+    },
+    "signUp": {
+      "title": "Crea tu Cuenta",
+      "description": "Comienza a crear videos profesionales con IA",
+      "name": "Nombre Completo",
+      "email": "Email",
+      "password": "Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "signUpButton": "Crear Cuenta",
+      "hasAccount": "¿Ya tienes una cuenta?",
+      "signIn": "Iniciar sesión"
+    }
+  },
+  "dashboard": {
+    "welcome": "Bienvenido de vuelta",
+    "analytics": {
+      "totalProjects": "Proyectos Totales",
+      "completedVideos": "Videos Completados",
+      "totalWatchTime": "Tiempo Total de Visualización",
+      "avgCompletionRate": "Tasa Promedio de Finalización"
+    },
+    "quickActions": {
+      "title": "Acciones Rápidas",
+      "newProject": "Nuevo Proyecto",
+      "scriptGenerator": "Generador de Guiones",
+      "voiceoverStudio": "Estudio de Voces",
+      "videoEditor": "Editor de Video"
+    }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "retry": "Intentar de nuevo",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "update": "Actualizar",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "export": "Exportar",
+    "import": "Importar",
+    "upload": "Subir",
+    "download": "Descargar"
+  }
+}

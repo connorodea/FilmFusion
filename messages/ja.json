@@ -1,0 +1,237 @@
+{
+  "navigation": {
+    "features": "機能",
+    "howItWorks": "仕組み",
+    "pricing": "料金",
+    "reviews": "レビュー",
+    "signIn": "サインイン",
+    "startFreeTrial": "無料トライアルを開始"
+  },
+  "hero": {
+    "badge": "AI駆動の動画作成",
+    "title": "{aiAutomation}でプロフェッショナルな動画を作成",
+    "aiAutomation": "AI自動化",
+    "description": "AI駆動のスクリプト作成、自然な音声、自動編集、クラウドベースのレンダリングで、あなたのアイデアを魅力的な長編動画に変換します。",
+    "startCreating": "今すぐ作成を開始",
+    "watchDemo": "デモを見る",
+    "stats": {
+      "creators": "10,000+ クリエイター",
+      "rating": "4.9/5 評価",
+      "faster": "10倍高速な制作"
+    }
+  },
+  "features": {
+    "title": "素晴らしい動画を作成するために必要なすべて",
+    "description": "私たちのAI駆動プラットフォームは、スクリプトから最終レンダリングまで、動画制作のあらゆる側面を処理します。",
+    "aiScriptwriting": {
+      "title": "AIスクリプト作成",
+      "description": "あなたのブランドボイスを理解する高度なAIで、コンテンツ目標に合わせた魅力的なスクリプトを生成します。"
+    },
+    "naturalVoiceovers": {
+      "title": "自然な音声",
+      "description": "数十のリアルなAI音声から選択するか、すべてのコンテンツで一貫したブランディングのために自分の声をクローンします。"
+    },
+    "automatedEditing": {
+      "title": "自動編集",
+      "description": "スマート編集アルゴリズムが自動的にビジュアルを同期し、トランジションを追加し、最大のエンゲージメントのためにペーシングを最適化します。"
+    },
+    "cloudRendering": {
+      "title": "クラウドレンダリング",
+      "description": "超高速クラウド処理により、4K品質出力で動画が数時間ではなく数分で準備完了します。"
+    },
+    "timelineEditor": {
+      "title": "タイムラインエディター",
+      "description": "ドラッグアンドドロップ機能とリアルタイムプレビューを備えた直感的なタイムラインエディターで動画を微調整します。"
+    },
+    "teamCollaboration": {
+      "title": "チーム協力",
+      "description": "リアルタイム協力ツール、コメント、チームプロジェクトの承認ワークフローでシームレスに協力します。"
+    }
+  },
+  "howItWorks": {
+    "title": "4つの簡単なステップでアイデアから動画へ",
+    "description": "私たちの合理化されたプロセスにより、プロフェッショナルな動画作成が誰でもアクセス可能になります。",
+    "steps": {
+      "inputIdea": {
+        "title": "アイデアを入力",
+        "description": "動画コンセプト、ターゲットオーディエンス、キーメッセージを簡単な日本語で説明してください。"
+      },
+      "aiGenerates": {
+        "title": "AIがスクリプトを生成",
+        "description": "私たちのAIがエンゲージメントとあなたの特定の目標に最適化された魅力的なスクリプトを作成します。"
+      },
+      "chooseVoice": {
+        "title": "音声とスタイルを選択",
+        "description": "あなたのブランドアイデンティティに合うプレミアムAI音声とビジュアルスタイルから選択します。"
+      },
+      "renderShare": {
+        "title": "レンダリングと共有",
+        "description": "あなたのプロフェッショナル動画がクラウドでレンダリングされ、すべてのプラットフォームで共有する準備が整います。"
+      }
+    }
+  },
+  "pricing": {
+    "title": "プランを選択",
+    "description": "無料で始めて、成長に合わせてスケールアップ。すべてのプランにコアAI機能が含まれています。",
+    "plans": {
+      "free": {
+        "name": "無料",
+        "price": "¥0",
+        "period": "/月",
+        "description": "始めるのに最適",
+        "features": {
+          "videos": "月5本の動画",
+          "quality": "720p動画品質",
+          "voices": "基本AI音声",
+          "templates": "標準テンプレート"
+        },
+        "cta": "無料で始める"
+      },
+      "pro": {
+        "name": "プロ",
+        "price": "¥2,900",
+        "period": "/月",
+        "description": "本格的なコンテンツクリエイター向け",
+        "badge": "最も人気",
+        "features": {
+          "videos": "月50本の動画",
+          "quality": "4K動画品質",
+          "voices": "プレミアムAI音声",
+          "templates": "高度なテンプレート",
+          "rendering": "優先レンダリング",
+          "support": "メールサポート"
+        },
+        "cta": "プロにアップグレード"
+      },
+      "enterprise": {
+        "name": "エンタープライズ",
+        "price": "¥9,900",
+        "period": "/月",
+        "description": "チームと代理店向け",
+        "features": {
+          "videos": "無制限動画",
+          "quality": "4K動画品質",
+          "voices": "カスタムAI音声クローニング",
+          "templates": "カスタムテンプレート",
+          "collaboration": "チーム協力",
+          "support": "優先サポート",
+          "api": "APIアクセス"
+        },
+        "cta": "営業に連絡"
+      }
+    }
+  },
+  "testimonials": {
+    "title": "世界中のコンテンツクリエイターに信頼されています",
+    "description": "ユーザーがFilmFusion体験について何を言っているかご覧ください。",
+    "reviews": {
+      "sarah": {
+        "name": "サラ・チェン",
+        "role": "マーケティングディレクター",
+        "content": "FilmFusionは私たちのコンテンツ作成プロセスを革命化しました。以前は数週間かかっていたものが今では数時間で済み、品質は一貫してプロフェッショナルです。"
+      },
+      "marcus": {
+        "name": "マーカス・ロドリゲス",
+        "role": "YouTubeクリエイター",
+        "content": "AIスクリプト作成は信じられないほど賢いです。私のスタイルを理解し、本当に私らしく聞こえるコンテンツを作成します。ゲームチェンジャーです！"
+      },
+      "emily": {
+        "name": "エミリー・ワトソン",
+        "role": "コース作成者",
+        "content": "FilmFusionで50本以上の教育動画を作成しました。自動編集により、高い制作価値を維持しながら無数の時間を節約できます。"
+      }
+    }
+  },
+  "cta": {
+    "title": "動画作成を変革する準備はできていますか？",
+    "description": "すでにFilmFusionを使用してプロフェッショナルな動画を大規模に制作している数千のクリエイターに参加してください。",
+    "startTrial": "無料トライアルを開始",
+    "scheduleDemo": "デモをスケジュール"
+  },
+  "footer": {
+    "description": "プロフェッショナルな長編コンテンツのためのAI駆動動画作成プラットフォーム。",
+    "product": {
+      "title": "製品",
+      "features": "機能",
+      "pricing": "料金",
+      "api": "API",
+      "integrations": "統合"
+    },
+    "company": {
+      "title": "会社",
+      "about": "会社概要",
+      "blog": "ブログ",
+      "careers": "採用",
+      "contact": "お問い合わせ"
+    },
+    "support": {
+      "title": "サポート",
+      "helpCenter": "ヘルプセンター",
+      "documentation": "ドキュメント",
+      "community": "コミュニティ",
+      "status": "ステータス"
+    },
+    "copyright": "© 2024 FilmFusion. 全著作権所有。"
+  },
+  "auth": {
+    "signIn": {
+      "title": "おかえりなさい",
+      "description": "FilmFusionアカウントにサインイン",
+      "email": "メール",
+      "password": "パスワード",
+      "forgotPassword": "パスワードを忘れましたか？",
+      "signInButton": "サインイン",
+      "noAccount": "アカウントをお持ちでないですか？",
+      "signUp": "サインアップ"
+    },
+    "signUp": {
+      "title": "アカウントを作成",
+      "description": "AIでプロフェッショナルな動画作成を始める",
+      "name": "フルネーム",
+      "email": "メール",
+      "password": "パスワード",
+      "confirmPassword": "パスワード確認",
+      "signUpButton": "アカウント作成",
+      "hasAccount": "すでにアカウントをお持ちですか？",
+      "signIn": "サインイン"
+    }
+  },
+  "dashboard": {
+    "welcome": "おかえりなさい",
+    "analytics": {
+      "totalProjects": "総プロジェクト数",
+      "completedVideos": "完了した動画",
+      "totalWatchTime": "総視聴時間",
+      "avgCompletionRate": "平均完了率"
+    },
+    "quickActions": {
+      "title": "クイックアクション",
+      "newProject": "新しいプロジェクト",
+      "scriptGenerator": "スクリプトジェネレーター",
+      "voiceoverStudio": "音声スタジオ",
+      "videoEditor": "動画エディター"
+    }
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "update": "更新",
+    "close": "閉じる",
+    "back": "戻る",
+    "next": "次へ",
+    "previous": "前へ",
+    "search": "検索",
+    "filter": "フィルター",
+    "sort": "並び替え",
+    "export": "エクスポート",
+    "import": "インポート",
+    "upload": "アップロード",
+    "download": "ダウンロード"
+  }
+}

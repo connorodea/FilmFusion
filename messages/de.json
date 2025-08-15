@@ -1,0 +1,237 @@
+{
+  "navigation": {
+    "features": "Funktionen",
+    "howItWorks": "Wie es funktioniert",
+    "pricing": "Preise",
+    "reviews": "Bewertungen",
+    "signIn": "Anmelden",
+    "startFreeTrial": "Kostenlose Testversion starten"
+  },
+  "hero": {
+    "badge": "KI-gestützte Videoerstellung",
+    "title": "Erstellen Sie professionelle Videos mit {aiAutomation}",
+    "aiAutomation": "KI-Automatisierung",
+    "description": "Verwandeln Sie Ihre Ideen in überzeugende Langform-Videos mit KI-gestützten Drehbüchern, natürlichen Voiceovers, automatisierter Bearbeitung und Cloud-basiertem Rendering.",
+    "startCreating": "Jetzt mit der Erstellung beginnen",
+    "watchDemo": "Demo ansehen",
+    "stats": {
+      "creators": "10.000+ Ersteller",
+      "rating": "4,9/5 Bewertung",
+      "faster": "10x schnellere Produktion"
+    }
+  },
+  "features": {
+    "title": "Alles was Sie brauchen, um erstaunliche Videos zu erstellen",
+    "description": "Unsere KI-gestützte Plattform übernimmt jeden Aspekt der Videoproduktion, vom Drehbuch bis zum finalen Rendering.",
+    "aiScriptwriting": {
+      "title": "KI-Drehbuchschreibung",
+      "description": "Generieren Sie überzeugende Drehbücher, die auf Ihre Inhaltsziele zugeschnitten sind, mit fortschrittlicher KI, die Ihre Markenstimme versteht."
+    },
+    "naturalVoiceovers": {
+      "title": "Natürliche Voiceovers",
+      "description": "Wählen Sie aus Dutzenden realistischer KI-Stimmen oder klonen Sie Ihre eigene Stimme für konsistentes Branding über alle Inhalte hinweg."
+    },
+    "automatedEditing": {
+      "title": "Automatisierte Bearbeitung",
+      "description": "Intelligente Bearbeitungsalgorithmen synchronisieren automatisch Visuals, fügen Übergänge hinzu und optimieren das Tempo für maximales Engagement."
+    },
+    "cloudRendering": {
+      "title": "Cloud-Rendering",
+      "description": "Blitzschnelle Cloud-Verarbeitung stellt sicher, dass Ihre Videos in Minuten, nicht Stunden, mit 4K-Qualitätsausgabe bereit sind."
+    },
+    "timelineEditor": {
+      "title": "Timeline-Editor",
+      "description": "Verfeinern Sie Ihre Videos mit unserem intuitiven Timeline-Editor, komplett mit Drag-and-Drop-Funktionalität und Echtzeit-Vorschau."
+    },
+    "teamCollaboration": {
+      "title": "Team-Zusammenarbeit",
+      "description": "Arbeiten Sie nahtlos zusammen mit Echtzeit-Kollaborationstools, Kommentaren und Genehmigungsworkflows für Teamprojekte."
+    }
+  },
+  "howItWorks": {
+    "title": "Von der Idee zum Video in 4 einfachen Schritten",
+    "description": "Unser optimierter Prozess macht professionelle Videoerstellung für jeden zugänglich.",
+    "steps": {
+      "inputIdea": {
+        "title": "Geben Sie Ihre Idee ein",
+        "description": "Beschreiben Sie Ihr Videokonzept, Zielgruppe und Schlüsselbotschaften in einfachem Deutsch."
+      },
+      "aiGenerates": {
+        "title": "KI generiert Drehbuch",
+        "description": "Unsere KI erstellt ein überzeugendes Drehbuch, optimiert für Engagement und Ihre spezifischen Ziele."
+      },
+      "chooseVoice": {
+        "title": "Stimme & Stil wählen",
+        "description": "Wählen Sie aus Premium-KI-Stimmen und visuellen Stilen, die zu Ihrer Markenidentität passen."
+      },
+      "renderShare": {
+        "title": "Rendern & Teilen",
+        "description": "Ihr professionelles Video wird in der Cloud gerendert und ist bereit, auf allen Plattformen geteilt zu werden."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Wählen Sie Ihren Plan",
+    "description": "Starten Sie kostenlos und skalieren Sie, während Sie wachsen. Alle Pläne beinhalten unsere Kern-KI-Funktionen.",
+    "plans": {
+      "free": {
+        "name": "Kostenlos",
+        "price": "0€",
+        "period": "/Monat",
+        "description": "Perfekt für den Einstieg",
+        "features": {
+          "videos": "5 Videos pro Monat",
+          "quality": "720p Videoqualität",
+          "voices": "Basis-KI-Stimmen",
+          "templates": "Standard-Vorlagen"
+        },
+        "cta": "Kostenlos starten"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "29€",
+        "period": "/Monat",
+        "description": "Für ernsthafte Content-Ersteller",
+        "badge": "Am beliebtesten",
+        "features": {
+          "videos": "50 Videos pro Monat",
+          "quality": "4K Videoqualität",
+          "voices": "Premium-KI-Stimmen",
+          "templates": "Erweiterte Vorlagen",
+          "rendering": "Prioritäts-Rendering",
+          "support": "E-Mail-Support"
+        },
+        "cta": "Auf Pro upgraden"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "99€",
+        "period": "/Monat",
+        "description": "Für Teams und Agenturen",
+        "features": {
+          "videos": "Unbegrenzte Videos",
+          "quality": "4K Videoqualität",
+          "voices": "Benutzerdefiniertes KI-Stimmen-Klonen",
+          "templates": "Benutzerdefinierte Vorlagen",
+          "collaboration": "Team-Zusammenarbeit",
+          "support": "Prioritäts-Support",
+          "api": "API-Zugang"
+        },
+        "cta": "Vertrieb kontaktieren"
+      }
+    }
+  },
+  "testimonials": {
+    "title": "Vertraut von Content-Erstellern weltweit",
+    "description": "Sehen Sie, was unsere Nutzer über ihre FilmFusion-Erfahrung sagen.",
+    "reviews": {
+      "sarah": {
+        "name": "Sarah Chen",
+        "role": "Marketing-Direktorin",
+        "content": "FilmFusion hat unseren Content-Erstellungsprozess revolutioniert. Was früher Wochen dauerte, dauert jetzt Stunden, und die Qualität ist durchgehend professionell."
+      },
+      "marcus": {
+        "name": "Marcus Rodriguez",
+        "role": "YouTube-Ersteller",
+        "content": "Das KI-Drehbuchschreiben ist unglaublich intelligent. Es versteht meinen Stil und erstellt Inhalte, die authentisch wie ich klingen. Ein Spielveränderer!"
+      },
+      "emily": {
+        "name": "Emily Watson",
+        "role": "Kurs-Erstellerin",
+        "content": "Ich habe über 50 Bildungsvideos mit FilmFusion erstellt. Die automatisierte Bearbeitung spart mir unzählige Stunden bei gleichbleibend hohem Produktionswert."
+      }
+    }
+  },
+  "cta": {
+    "title": "Bereit, Ihre Videoerstellung zu transformieren?",
+    "description": "Schließen Sie sich Tausenden von Erstellern an, die bereits FilmFusion nutzen, um professionelle Videos im großen Maßstab zu produzieren.",
+    "startTrial": "Kostenlose Testversion starten",
+    "scheduleDemo": "Demo planen"
+  },
+  "footer": {
+    "description": "KI-gestützte Videoerstellungsplattform für professionelle Langform-Inhalte.",
+    "product": {
+      "title": "Produkt",
+      "features": "Funktionen",
+      "pricing": "Preise",
+      "api": "API",
+      "integrations": "Integrationen"
+    },
+    "company": {
+      "title": "Unternehmen",
+      "about": "Über uns",
+      "blog": "Blog",
+      "careers": "Karriere",
+      "contact": "Kontakt"
+    },
+    "support": {
+      "title": "Support",
+      "helpCenter": "Hilfe-Center",
+      "documentation": "Dokumentation",
+      "community": "Community",
+      "status": "Status"
+    },
+    "copyright": "© 2024 FilmFusion. Alle Rechte vorbehalten."
+  },
+  "auth": {
+    "signIn": {
+      "title": "Willkommen zurück",
+      "description": "Melden Sie sich bei Ihrem FilmFusion-Konto an",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "forgotPassword": "Passwort vergessen?",
+      "signInButton": "Anmelden",
+      "noAccount": "Haben Sie kein Konto?",
+      "signUp": "Registrieren"
+    },
+    "signUp": {
+      "title": "Erstellen Sie Ihr Konto",
+      "description": "Beginnen Sie mit der Erstellung professioneller Videos mit KI",
+      "name": "Vollständiger Name",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "confirmPassword": "Passwort bestätigen",
+      "signUpButton": "Konto erstellen",
+      "hasAccount": "Haben Sie bereits ein Konto?",
+      "signIn": "Anmelden"
+    }
+  },
+  "dashboard": {
+    "welcome": "Willkommen zurück",
+    "analytics": {
+      "totalProjects": "Gesamte Projekte",
+      "completedVideos": "Abgeschlossene Videos",
+      "totalWatchTime": "Gesamte Wiedergabezeit",
+      "avgCompletionRate": "Durchschnittliche Abschlussrate"
+    },
+    "quickActions": {
+      "title": "Schnellaktionen",
+      "newProject": "Neues Projekt",
+      "scriptGenerator": "Drehbuch-Generator",
+      "voiceoverStudio": "Voiceover-Studio",
+      "videoEditor": "Video-Editor"
+    }
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Ein Fehler ist aufgetreten",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "update": "Aktualisieren",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Vorherige",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "sort": "Sortieren",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "upload": "Hochladen",
+    "download": "Herunterladen"
+  }
+}
