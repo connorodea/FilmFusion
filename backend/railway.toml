@@ -1,0 +1,14 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[env]
+OPENAI_API_KEY = { $generate = true }
+ELEVENLABS_API_KEY = { $generate = true }
+CORS_ORIGINS = "https://your-filmfusion-domain.vercel.app"
