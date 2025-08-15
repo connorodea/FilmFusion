@@ -16,16 +16,18 @@
    \`\`\`
    OPENAI_API_KEY=your_openai_api_key
    ELEVENLABS_API_KEY=your_elevenlabs_api_key
+   DATABASE_URL=postgresql://username:password@host:port/database
+   JWT_SECRET=your_jwt_secret_key
    CORS_ORIGINS=https://your-vercel-app.vercel.app
    \`\`\`
 
-4. **Get Railway URL**: Copy your Railway app URL (e.g., `https://your-app.railway.app`)
+4. **Get Railway URL**: Copy your Railway app URL (e.g., `https://filmfusion-production-16fd.up.railway.app`)
 
 ## Frontend Deployment (Vercel)
 
 1. **Update Environment Variables** in Vercel dashboard:
    \`\`\`
-   NEXT_PUBLIC_BACKEND_URL=https://your-railway-app.railway.app
+   NEXT_PUBLIC_BACKEND_URL=https://filmfusion-production-16fd.up.railway.app
    \`\`\`
 
 2. **Deploy**: Push to GitHub and Vercel will auto-deploy
@@ -42,18 +44,24 @@
 - Create API key for voice synthesis
 - Add to Railway environment variables
 
+### Database Setup
+- Railway PostgreSQL database is automatically configured
+- Set DATABASE_URL in Railway environment variables
+- JWT_SECRET for user authentication
+
 ## Testing the Integration
 
-1. Deploy backend to Railway
+1. Deploy backend to Railway with PostgreSQL database
 2. Update `NEXT_PUBLIC_BACKEND_URL` in Vercel
 3. Test script generation, voiceover, and rendering features
 4. Monitor Railway logs for any issues
 
 ## Production Checklist
 
-- [ ] Railway backend deployed with environment variables
-- [ ] Vercel frontend updated with backend URL
-- [ ] OpenAI API key configured
-- [ ] ElevenLabs API key configured
+- [x] Railway backend deployed with PostgreSQL database
+- [x] Frontend configured with Railway backend URL
+- [ ] OpenAI API key configured in Railway
+- [ ] ElevenLabs API key configured in Railway
+- [ ] JWT_SECRET configured in Railway
 - [ ] CORS origins properly set
 - [ ] All features tested end-to-end

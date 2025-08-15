@@ -1,22 +1,35 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 import asyncio
 import json
 import os
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import subprocess
 import tempfile
 from pathlib import Path
 import base64
 from openai import OpenAI
 import httpx
+from datetime import datetime, timedelta
+
+from database import get_db, create_tables, User, Project, RenderJob, ProjectAnalytics, AISession
+from database import (
+    get_user_by_email, get_user_by_username, create_user, get_user_projects, 
+    create_project, update_project, create_render_job, update_render_job, log_ai_session
+)
+from auth import verify_password, get_password_hash, create_access_token, verify_token
 
 app = FastAPI(title="FilmFusion Backend API", version="1.0.0")
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Security
+security = HTTPBearer()
 
 # CORS middleware for frontend communication
 app.add_middleware(
@@ -27,14 +40,205 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory storage for demo (use Redis/Database in production)
-render_jobs: Dict[str, Dict] = {}
+@app.on_event("startup")
+async def startup_event():
+    create_tables()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
+    """Get current authenticated user"""
+    token = credentials.credentials
+    payload = verify_token(token)
+    
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return user
+
+# In-memory storage for WebSocket connections (use Redis in production)
 active_connections: List[WebSocket] = []
 containers: Dict[str, str] = {}  # Store container IDs for code interpreter
 
 @app.get("/")
 async def root():
     return {"message": "FilmFusion Backend API", "status": "running", "features": ["script_generation", "voiceover", "image_generation", "code_interpreter", "video_planning", "content_analysis", "visual_analysis", "workflow_debugging", "multi_agent_orchestration", "content_evaluation"]}
+
+@app.post("/api/auth/register")
+async def register(request: dict, db: Session = Depends(get_db)):
+    """Register a new user"""
+    try:
+        email = request.get("email")
+        username = request.get("username")
+        password = request.get("password")
+        full_name = request.get("full_name")
+        
+        if not email or not username or not password:
+            raise HTTPException(status_code=400, detail="Email, username, and password are required")
+        
+        # Check if user already exists
+        if get_user_by_email(db, email):
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        if get_user_by_username(db, username):
+            raise HTTPException(status_code=400, detail="Username already taken")
+        
+        # Create new user
+        hashed_password = get_password_hash(password)
+        user = create_user(db, email, username, hashed_password, full_name)
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        return {
+            "success": True,
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.full_name,
+                "is_premium": user.is_premium
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auth/login")
+async def login(request: dict, db: Session = Depends(get_db)):
+    """Login user"""
+    try:
+        email = request.get("email")
+        password = request.get("password")
+        
+        if not email or not password:
+            raise HTTPException(status_code=400, detail="Email and password are required")
+        
+        # Get user by email
+        user = get_user_by_email(db, email)
+        if not user or not verify_password(password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        return {
+            "success": True,
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.full_name,
+                "is_premium": user.is_premium
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/projects")
+async def get_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get user's projects"""
+    projects = get_user_projects(db, current_user.id)
+    
+    return {
+        "success": True,
+        "projects": [{
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "status": p.status,
+            "project_type": p.project_type,
+            "duration": p.duration,
+            "platform": p.platform,
+            "thumbnail_url": p.thumbnail_url,
+            "video_url": p.video_url,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None
+        } for p in projects]
+    }
+
+@app.post("/api/projects")
+async def create_new_project(request: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create a new project"""
+    try:
+        name = request.get("name")
+        description = request.get("description")
+        project_type = request.get("project_type")
+        
+        if not name:
+            raise HTTPException(status_code=400, detail="Project name is required")
+        
+        project = create_project(db, current_user.id, name, description, project_type)
+        
+        return {
+            "success": True,
+            "project": {
+                "id": project.id,
+                "name": project.name,
+                "description": project.description,
+                "status": project.status,
+                "project_type": project.project_type,
+                "created_at": project.created_at.isoformat()
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/dashboard/analytics")
+async def get_dashboard_analytics(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get dashboard analytics for user"""
+    try:
+        # Get user's projects and analytics
+        projects = get_user_projects(db, current_user.id)
+        total_projects = len(projects)
+        
+        # Calculate analytics
+        completed_projects = len([p for p in projects if p.status == "completed"])
+        in_progress_projects = len([p for p in projects if p.status == "in_progress"])
+        
+        # Get render jobs
+        render_jobs = db.query(RenderJob).filter(RenderJob.user_id == current_user.id).all()
+        total_renders = len(render_jobs)
+        successful_renders = len([r for r in render_jobs if r.status == "completed"])
+        
+        # Get AI usage
+        ai_sessions = db.query(AISession).filter(AISession.user_id == current_user.id).all()
+        total_ai_calls = len(ai_sessions)
+        total_tokens = sum(s.tokens_used for s in ai_sessions)
+        
+        return {
+            "success": True,
+            "analytics": {
+                "total_projects": total_projects,
+                "completed_projects": completed_projects,
+                "in_progress_projects": in_progress_projects,
+                "total_renders": total_renders,
+                "successful_renders": successful_renders,
+                "render_success_rate": (successful_renders / total_renders * 100) if total_renders > 0 else 0,
+                "total_ai_calls": total_ai_calls,
+                "total_tokens_used": total_tokens,
+                "account_type": "Premium" if current_user.is_premium else "Free"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/reasoning/plan-video")
 async def plan_video_with_reasoning(request: dict):
@@ -358,10 +562,10 @@ async def evaluate_content_with_reasoning(request: dict):
         raise HTTPException(status_code=500, detail=f"Content evaluation failed: {str(e)}")
 
 @app.post("/api/generate-script")
-async def generate_script(request: dict):
+async def generate_script(request: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate AI script using OpenAI API with reasoning capabilities"""
     try:
-        # Use reasoning model for complex script generation
+        session_id = str(uuid.uuid4())
         use_reasoning = request.get('use_reasoning', False)
         
         if use_reasoning:
@@ -406,6 +610,15 @@ async def generate_script(request: dict):
                 if output.type == "reasoning" and hasattr(output, 'summary'):
                     reasoning_summary = output.summary[0].text if output.summary else ""
             
+            log_ai_session(
+                db, session_id, current_user.id, "script_generation", "gpt-5",
+                response.usage.total_tokens, request, {
+                    "script": script_content,
+                    "reasoning_summary": reasoning_summary
+                },
+                reasoning_tokens=response.usage.output_tokens_details.reasoning_tokens if hasattr(response.usage, 'output_tokens_details') else 0
+            )
+            
             return {
                 "success": True,
                 "script": script_content,
@@ -436,6 +649,11 @@ async def generate_script(request: dict):
             )
             
             script_content = response.output_text or "Script generation failed"
+            
+            log_ai_session(
+                db, session_id, current_user.id, "script_generation", "gpt-4.1",
+                response.usage.total_tokens, request, {"script": script_content}
+            )
             
             return {
                 "success": True,
@@ -590,24 +808,19 @@ async def get_media(file_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/render-video")
-async def render_video(request: dict):
+async def render_video(request: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Start video rendering process"""
     try:
         job_id = str(uuid.uuid4())
+        project_id = request.get('project_id')
         
-        # Store render job
-        render_jobs[job_id] = {
-            "id": job_id,
-            "status": "queued",
-            "progress": 0,
-            "project_name": request.get('project_name', 'Untitled Project'),
-            "export_settings": request.get('export_settings', {}),
-            "timeline_data": request.get('timeline_data', {}),
-            "created_at": asyncio.get_event_loop().time()
-        }
+        render_job = create_render_job(
+            db, job_id, current_user.id, project_id, 
+            request.get('export_settings', {})
+        )
         
         # Start background rendering task
-        asyncio.create_task(process_video_render(job_id))
+        asyncio.create_task(process_video_render(job_id, db))
         
         return {
             "success": True,
@@ -618,15 +831,11 @@ async def render_video(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-async def process_video_render(job_id: str):
+async def process_video_render(job_id: str, db: Session):
     """Background task to process video rendering"""
     try:
-        job = render_jobs[job_id]
-        
         # Update status to processing
-        job["status"] = "processing"
-        job["progress"] = 10
-        await broadcast_job_update(job_id, job)
+        update_render_job(db, job_id, status="processing", progress=10, started_at=datetime.utcnow())
         
         # Simulate video processing steps
         steps = [
@@ -640,28 +849,61 @@ async def process_video_render(job_id: str):
         
         for step_name, progress in steps:
             await asyncio.sleep(2)  # Simulate processing time
-            job["progress"] = progress
-            job["current_step"] = step_name
-            await broadcast_job_update(job_id, job)
+            update_render_job(db, job_id, progress=progress, current_step=step_name)
+            
+            # Broadcast update via WebSocket
+            await broadcast_job_update(job_id, {
+                "id": job_id,
+                "status": "processing",
+                "progress": progress,
+                "current_step": step_name
+            })
         
         # Mark as completed
-        job["status"] = "completed"
-        job["download_url"] = f"/api/download/{job_id}"
-        job["file_size"] = "45.2 MB"
-        await broadcast_job_update(job_id, job)
+        update_render_job(
+            db, job_id, 
+            status="completed", 
+            progress=100,
+            completed_at=datetime.utcnow(),
+            output_url=f"/api/download/{job_id}",
+            file_size=47185920  # 45.2 MB in bytes
+        )
+        
+        await broadcast_job_update(job_id, {
+            "id": job_id,
+            "status": "completed",
+            "progress": 100,
+            "download_url": f"/api/download/{job_id}",
+            "file_size": "45.2 MB"
+        })
         
     except Exception as e:
-        job["status"] = "failed"
-        job["error"] = str(e)
-        await broadcast_job_update(job_id, job)
+        update_render_job(db, job_id, status="failed", error_message=str(e))
+        await broadcast_job_update(job_id, {
+            "id": job_id,
+            "status": "failed",
+            "error": str(e)
+        })
 
 @app.get("/api/render-status/{job_id}")
-async def get_render_status(job_id: str):
+async def get_render_status(job_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get render job status"""
-    if job_id not in render_jobs:
+    job = db.query(RenderJob).filter(RenderJob.id == job_id, RenderJob.user_id == current_user.id).first()
+    
+    if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    return render_jobs[job_id]
+    return {
+        "id": job.id,
+        "status": job.status,
+        "progress": job.progress,
+        "current_step": job.current_step,
+        "error_message": job.error_message,
+        "output_url": job.output_url,
+        "file_size": job.file_size,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None
+    }
 
 @app.get("/api/download/{job_id}")
 async def download_video(job_id: str):
