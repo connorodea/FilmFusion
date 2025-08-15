@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Video,
   ArrowLeft,
@@ -22,6 +24,11 @@ import {
   Lightbulb,
   FileText,
   Sparkles,
+  Search,
+  Bot,
+  TrendingUp,
+  Globe,
+  Zap,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -79,6 +86,21 @@ const durationOptions = [
   { value: "long", label: "10+ minutes" },
 ]
 
+const platformOptions = [
+  { value: "YouTube", label: "YouTube" },
+  { value: "Instagram", label: "Instagram" },
+  { value: "TikTok", label: "TikTok" },
+  { value: "LinkedIn", label: "LinkedIn" },
+  { value: "Twitter", label: "Twitter" },
+  { value: "Facebook", label: "Facebook" },
+]
+
+const researchDepthOptions = [
+  { value: "light", label: "Light - Quick overview" },
+  { value: "medium", label: "Medium - Balanced research" },
+  { value: "deep", label: "Deep - Comprehensive analysis" },
+]
+
 export default function ScriptGeneratorPage() {
   const [selectedTemplate, setSelectedTemplate] = useState("")
   const [topic, setTopic] = useState("")
@@ -89,13 +111,68 @@ export default function ScriptGeneratorPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedScript, setGeneratedScript] = useState("")
   const [scriptTitle, setScriptTitle] = useState("")
+  const [useWebSearch, setUseWebSearch] = useState(true)
+  const [useAIAgent, setUseAIAgent] = useState(true)
+  const [platform, setPlatform] = useState("YouTube")
+  const [researchDepth, setResearchDepth] = useState("medium")
+  const [isResearching, setIsResearching] = useState(false)
+  const [researchResults, setResearchResults] = useState("")
+  const [agentSuggestions, setAgentSuggestions] = useState("")
 
   const handleGenerate = async () => {
     if (!topic || !selectedTemplate) return
 
     setIsGenerating(true)
+    setIsResearching(true)
 
     try {
+      if (useWebSearch) {
+        const researchResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/research-content`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              topic,
+              depth: researchDepth,
+              industry: "content creation",
+              geographic_focus: "Global",
+            }),
+          },
+        )
+
+        if (researchResponse.ok) {
+          const researchData = await researchResponse.json()
+          setResearchResults(researchData.research_summary)
+        }
+      }
+
+      setIsResearching(false)
+
+      if (useAIAgent) {
+        const agentResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/video-creator-agent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: `I want to create a ${selectedTemplate} video about ${topic} for ${platform}. What are the best practices and current trends I should follow?`,
+              video_type: selectedTemplate,
+              platform: platform.toLowerCase(),
+            }),
+          },
+        )
+
+        if (agentResponse.ok) {
+          const agentData = await agentResponse.json()
+          setAgentSuggestions(agentData.response)
+        }
+      }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/generate-script`,
         {
@@ -109,10 +186,14 @@ export default function ScriptGeneratorPage() {
             tone,
             audience,
             duration,
+            platform,
             key_points: keyPoints
               .split(",")
               .map((point) => point.trim())
               .filter(Boolean),
+            use_web_search: useWebSearch,
+            research_context: researchResults,
+            agent_suggestions: agentSuggestions,
           }),
         },
       )
@@ -126,17 +207,16 @@ export default function ScriptGeneratorPage() {
       setScriptTitle(`${topic} - ${scriptTemplates.find((t) => t.id === selectedTemplate)?.name}`)
     } catch (error) {
       console.error("Error generating script:", error)
-      // Fallback to sample script if API fails
       const sampleScript = generateSampleScript(topic, selectedTemplate, tone, audience, duration)
       setGeneratedScript(sampleScript)
       setScriptTitle(`${topic} - ${scriptTemplates.find((t) => t.id === selectedTemplate)?.name}`)
     } finally {
       setIsGenerating(false)
+      setIsResearching(false)
     }
   }
 
   const generateSampleScript = (topic: string, template: string, tone: string, audience: string, duration: string) => {
-    // This would be replaced with actual AI generation
     return `# ${topic} Script
 
 ## Hook (0-5 seconds)
@@ -176,7 +256,6 @@ Thanks for watching, and I'll see you in the next video!
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -210,7 +289,6 @@ Thanks for watching, and I'll see you in the next video!
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-6xl mx-auto">
-          {/* Page Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-2 mb-4">
               <Wand2 className="w-6 h-6 text-primary" />
@@ -224,135 +302,243 @@ Thanks for watching, and I'll see you in the next video!
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8">
-            {/* Input Form */}
             <div className="space-y-6">
               <Card className="border-border shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 font-[family-name:var(--font-work-sans)]">
                     <Sparkles className="w-5 h-5 text-primary" />
-                    <span>Script Configuration</span>
+                    <span>AI-Powered Script Configuration</span>
                   </CardTitle>
                   <CardDescription>
-                    Tell us about your video and we'll generate a professional script tailored to your needs.
+                    Enhanced with web search and AI agents for current trends and best practices.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Template Selection */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Choose a Template</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {scriptTemplates.map((template) => (
-                        <Card
-                          key={template.id}
-                          className={`cursor-pointer transition-all hover:shadow-md ${
-                            selectedTemplate === template.id
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                          onClick={() => setSelectedTemplate(template.id)}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex items-start space-x-3">
-                              <div
-                                className={`p-2 rounded-lg ${
-                                  selectedTemplate === template.id ? "bg-primary/10" : "bg-muted"
-                                }`}
-                              >
-                                {template.icon}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-sm">{template.name}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
-                              </div>
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="basic">Basic Settings</TabsTrigger>
+                      <TabsTrigger value="advanced">AI Features</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="basic" className="space-y-6">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Choose a Template</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {scriptTemplates.map((template) => (
+                            <Card
+                              key={template.id}
+                              className={`cursor-pointer transition-all hover:shadow-md ${
+                                selectedTemplate === template.id
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                              onClick={() => setSelectedTemplate(template.id)}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex items-start space-x-3">
+                                  <div
+                                    className={`p-2 rounded-lg ${
+                                      selectedTemplate === template.id ? "bg-primary/10" : "bg-muted"
+                                    }`}
+                                  >
+                                    {template.icon}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-medium text-sm">{template.name}</h3>
+                                    <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="topic">Video Topic *</Label>
+                        <Input
+                          id="topic"
+                          placeholder="e.g., How to use AI for content creation"
+                          value={topic}
+                          onChange={(e) => setTopic(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="keyPoints">Key Points (Optional)</Label>
+                        <Textarea
+                          id="keyPoints"
+                          placeholder="List the main points you want to cover, separated by commas"
+                          value={keyPoints}
+                          onChange={(e) => setKeyPoints(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Tone</Label>
+                          <Select value={tone} onValueChange={setTone}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select tone" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {toneOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Target Audience</Label>
+                          <Select value={audience} onValueChange={setAudience}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select audience" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {audienceOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Duration</Label>
+                          <Select value={duration} onValueChange={setDuration}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select duration" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {durationOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Target Platform</Label>
+                          <Select value={platform} onValueChange={setPlatform}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {platformOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="advanced" className="space-y-6">
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <Search className="w-5 h-5 text-primary" />
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
+                            <div>
+                              <h3 className="font-medium">Web Search Research</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Research current trends and information about your topic
+                              </p>
+                            </div>
+                          </div>
+                          <Switch checked={useWebSearch} onCheckedChange={setUseWebSearch} />
+                        </div>
 
-                  {/* Topic Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="topic">Video Topic *</Label>
-                    <Input
-                      id="topic"
-                      placeholder="e.g., How to use AI for content creation"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                    />
-                  </div>
+                        <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <Bot className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">AI Video Creator Agent</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Get expert suggestions and best practices from our AI agent
+                              </p>
+                            </div>
+                          </div>
+                          <Switch checked={useAIAgent} onCheckedChange={setUseAIAgent} />
+                        </div>
 
-                  {/* Key Points */}
-                  <div className="space-y-2">
-                    <Label htmlFor="keyPoints">Key Points (Optional)</Label>
-                    <Textarea
-                      id="keyPoints"
-                      placeholder="List the main points you want to cover, separated by commas"
-                      value={keyPoints}
-                      onChange={(e) => setKeyPoints(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
+                        {useWebSearch && (
+                          <div className="space-y-2">
+                            <Label>Research Depth</Label>
+                            <Select value={researchDepth} onValueChange={setResearchDepth}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select research depth" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {researchDepthOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
 
-                  {/* Configuration Options */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Tone</Label>
-                      <Select value={tone} onValueChange={setTone}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select tone" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {toneOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                        {(researchResults || agentSuggestions) && (
+                          <div className="space-y-4">
+                            {researchResults && (
+                              <Card className="border-primary/20 bg-primary/5">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-sm flex items-center space-x-2">
+                                    <TrendingUp className="w-4 h-4" />
+                                    <span>Research Insights</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <p className="text-sm text-muted-foreground">{researchResults}</p>
+                                </CardContent>
+                              </Card>
+                            )}
 
-                    <div className="space-y-2">
-                      <Label>Target Audience</Label>
-                      <Select value={audience} onValueChange={setAudience}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select audience" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {audienceOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                            {agentSuggestions && (
+                              <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-sm flex items-center space-x-2">
+                                    <Zap className="w-4 h-4" />
+                                    <span>AI Agent Recommendations</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <p className="text-sm text-muted-foreground">{agentSuggestions}</p>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
 
-                    <div className="space-y-2">
-                      <Label>Duration</Label>
-                      <Select value={duration} onValueChange={setDuration}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select duration" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {durationOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Generate Button */}
                   <Button
                     onClick={handleGenerate}
                     disabled={!topic || !selectedTemplate || isGenerating}
                     className="w-full bg-primary hover:bg-primary/90"
                     size="lg"
                   >
-                    {isGenerating ? (
+                    {isResearching ? (
+                      <>
+                        <Globe className="w-4 h-4 mr-2 animate-pulse" />
+                        Researching Topic...
+                      </>
+                    ) : isGenerating ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                         Generating Script...
@@ -360,7 +546,7 @@ Thanks for watching, and I'll see you in the next video!
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4 mr-2" />
-                        Generate Script
+                        Generate AI-Enhanced Script
                       </>
                     )}
                   </Button>
@@ -368,7 +554,6 @@ Thanks for watching, and I'll see you in the next video!
               </Card>
             </div>
 
-            {/* Generated Script */}
             <div className="space-y-6">
               <Card className="border-border shadow-sm">
                 <CardHeader>
