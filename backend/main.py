@@ -52,11 +52,17 @@ from monitoring import (
 
 from email_service import email_service
 
+import redis
+import os
+from pathlib import Path
+
 app = FastAPI(title="FilmFusion Backend API", version="1.0.0")
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
 # Security
 security = HTTPBearer()
@@ -106,14 +112,57 @@ async def startup_event():
 async def shutdown_event():
     logger.info("FilmFusion Backend API shutting down")
 
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+VOLUME_PATH = Path("/volume")
+VOLUME_PATH.mkdir(exist_ok=True)
+
+# Initialize Redis connection
+try:
+    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+    redis_client.ping()
+    print("✅ Redis connected successfully")
+except Exception as e:
+    print(f"❌ Redis connection failed: {e}")
+    redis_client = None
+
 @app.get("/health")
 async def health_check():
-    """Basic health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
-    }
+    """Enhanced health check with Redis and volume status"""
+    try:
+        # Check database
+        db_status = "healthy"
+        db = next(get_db())
+        try:
+            db.execute(text("SELECT 1"))
+        except Exception:
+            db_status = "unhealthy"
+        finally:
+            db.close()
+        
+        redis_status = "healthy"
+        if redis_client:
+            try:
+                redis_client.ping()
+            except Exception:
+                redis_status = "unhealthy"
+        else:
+            redis_status = "not_configured"
+        
+        volume_status = "healthy" if VOLUME_PATH.exists() and VOLUME_PATH.is_dir() else "unhealthy"
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "services": {
+                "database": db_status,
+                "redis": redis_status,
+                "volume": volume_status,
+                "openai": "configured" if OPENAI_API_KEY else "not_configured",
+                "elevenlabs": "configured" if ELEVENLABS_API_KEY else "not_configured"
+            }
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
 
 @app.get("/health/detailed")
 async def detailed_health_check(db: Session = Depends(get_db)):
@@ -183,8 +232,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     
     return user
 
-# In-memory storage for WebSocket connections (use Redis in production)
-active_connections: List[WebSocket] = []
+if redis_client:
+    # Use Redis for WebSocket connection management
+    async def add_connection(connection_id: str, websocket: WebSocket):
+        await redis_client.hset("ws_connections", connection_id, "active")
+    
+    async def remove_connection(connection_id: str):
+        await redis_client.hdel("ws_connections", connection_id)
+else:
+    # Fallback to in-memory storage
+    active_connections: List[WebSocket] = []
+
 containers: Dict[str, str] = {}  # Store container IDs for code interpreter
 
 @app.get("/")
@@ -1225,43 +1283,114 @@ async def upload_media(request: Request, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/generate-voiceover")
-async def generate_voiceover(request: dict):
-    """Generate AI voiceover using ElevenLabs API"""
+class VoiceoverRequest(BaseModel):
+    text: str
+    voice_id: str = "EXAVITQu4vr4xnSDxMaL"
+    stability: float = 0.5
+    clarity: float = 0.5
+    speed: float = 1.0
+
+@app.post("/api/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload file with volume caching and Vercel Blob storage"""
     try:
-        elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
+        temp_dir = VOLUME_PATH / "temp" / str(current_user.id)
+        temp_dir.mkdir(parents=True, exist_ok=True)
         
-        if elevenlabs_api_key:
-            # Use ElevenLabs API
-            voice_id = request.get('voice_id', 'EXAVITQu4vr4xnSDxMaL')  # Default voice
+        file_content = await file.read()
+        safe_filename = sanitize_input(file.filename)
+        
+        # Cache file temporarily on volume
+        temp_file_path = temp_dir / safe_filename
+        with open(temp_file_path, "wb") as temp_file:
+            temp_file.write(file_content)
+        
+        file_id = str(uuid.uuid4())
+        file_extension = Path(safe_filename).suffix
+        blob_filename = f"media/{file_id}{file_extension}"
+        
+        # Upload to Vercel Blob
+        blob_response = await put(
+            pathname=blob_filename,
+            body=file_content,
+            options={
+                "access": "public",
+                "contentType": file.content_type
+            }
+        )
+        
+        if redis_client:
+            file_metadata = {
+                "filename": safe_filename,
+                "file_url": blob_response["url"],
+                "file_size": len(file_content),
+                "file_type": file.content_type,
+                "user_id": str(current_user.id)
+            }
+            redis_client.hset(f"file:{file_id}", mapping=file_metadata)
+            redis_client.expire(f"file:{file_id}", 3600)  # 1 hour cache
+        
+        return {
+            "success": True,
+            "file_id": file_id,
+            "filename": safe_filename,
+            "file_url": blob_response["url"],
+            "file_size": len(file_content),
+            "file_type": file.content_type
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"File upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
+@app.post("/api/generate-voiceover")
+async def generate_voiceover(
+    request: VoiceoverRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate AI voiceover with Redis caching"""
+    try:
+        cache_key = f"voiceover:{hash(request.text + request.voice_id)}"
+        if redis_client:
+            cached_result = redis_client.get(cache_key)
+            if cached_result:
+                return json.loads(cached_result)
+        
+        audio_dir = VOLUME_PATH / "audio" / str(current_user.id)
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate voiceover with ElevenLabs
+        if ELEVENLABS_API_KEY:
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{request.voice_id}"
+            headers = {
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": ELEVENLABS_API_KEY
+            }
+            
+            data = {
+                "text": request.text,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": request.stability,
+                    "similarity_boost": request.clarity,
+                    "speed": request.speed
+                }
+            }
             
             async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-                    headers={
-                        "Accept": "audio/mpeg",
-                        "Content-Type": "application/json",
-                        "xi-api-key": elevenlabs_api_key
-                    },
-                    json={
-                        "text": request.get('text', ''),
-                        "model_id": "eleven_monolingual_v1",
-                        "voice_settings": {
-                            "stability": request.get('stability', 0.5),
-                            "similarity_boost": request.get('similarity_boost', 0.5),
-                            "style": request.get('style', 0.0),
-                            "use_speaker_boost": True
-                        }
-                    }
-                )
+                response = await client.post(url, json=data, headers=headers)
                 
                 if response.status_code == 200:
                     audio_id = str(uuid.uuid4())
-                    audio_dir = Path("audio")
-                    audio_dir.mkdir(exist_ok=True)
                     
-                    audio_path = audio_dir / f"{audio_id}.mp3"
-                    with open(audio_path, "wb") as f:
+                    # Save temporarily to volume
+                    temp_audio_path = audio_dir / f"{audio_id}.mp3"
+                    with open(temp_audio_path, "wb") as f:
                         f.write(response.content)
                     
                     # Store audio in Vercel Blob
@@ -1275,15 +1404,20 @@ async def generate_voiceover(request: dict):
                         }
                     )
                     
-                    return {
+                    result = {
                         "success": True,
                         "audio_id": audio_id,
                         "audio_url": blob_response["url"],
-                        "duration": len(request.get('text', '').split()) * 0.5,  # Estimate
-                        "file_size": f"{len(response.content) / 1024 / 1024:.1f} MB",
-                        "voice_used": request.get('voice', 'Sarah - Professional')
+                        "duration": len(response.content) / 16000,  # Approximate duration
+                        "voice_id": request.voice_id,
+                        "text": request.text
                     }
-        
+                    
+                    if redis_client:
+                        redis_client.setex(cache_key, 1800, json.dumps(result))  # 30 min cache
+                    
+                    return result
+
         # Fallback to mock response
         audio_id = str(uuid.uuid4())
         await asyncio.sleep(2)
