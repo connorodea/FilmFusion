@@ -7,24 +7,57 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Video, ArrowLeft } from "lucide-react"
+import { Video, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 
 export default function SignInPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate authentication
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Login failed")
+      }
+
+      if (data.success) {
+        // Store authentication data
+        localStorage.setItem("token", data.access_token)
+        localStorage.setItem("user", JSON.stringify(data.user))
+
+        // Store subscription status for quick access
+        localStorage.setItem("subscription_status", data.user.subscription_status || "free")
+        localStorage.setItem("subscription_plan", data.user.subscription_plan || "free")
+
+        // Redirect to dashboard
+        window.location.href = "/dashboard"
+      } else {
+        throw new Error(data.message || "Login failed")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred during login")
+    } finally {
       setIsLoading(false)
-      // Redirect to dashboard (placeholder)
-      window.location.href = "/dashboard"
-    }, 1000)
+    }
   }
 
   return (
@@ -58,6 +91,7 @@ export default function SignInPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -69,8 +103,17 @@ export default function SignInPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
+
+              {error && (
+                <div className="flex items-center space-x-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-destructive" />
+                  <span className="text-sm text-destructive">{error}</span>
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
@@ -81,6 +124,11 @@ export default function SignInPage() {
                 Don't have an account?{" "}
                 <Link href="/auth/signup" className="text-primary hover:underline">
                   Sign up
+                </Link>
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                <Link href="/auth/forgot-password" className="text-primary hover:underline">
+                  Forgot your password?
                 </Link>
               </p>
             </div>

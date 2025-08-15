@@ -227,6 +227,185 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4 font-[family-name:var(--font-work-sans)]">
+              Choose Your Plan
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Start free and scale as you grow. All plans include our core AI features.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Free Plan */}
+            <Card className="border-border shadow-sm relative">
+              <CardHeader className="text-center pb-8">
+                <CardTitle className="text-2xl font-bold font-[family-name:var(--font-work-sans)]">Free</CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$0</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+                <CardDescription className="mt-4">Perfect for getting started</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>5 videos per month</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>720p video quality</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Basic AI voices</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Standard templates</span>
+                  </li>
+                </ul>
+                <Button className="w-full mt-8 bg-transparent" variant="outline" asChild>
+                  <a href="/auth/signup">Get Started Free</a>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Pro Plan */}
+            <Card className="border-primary shadow-lg relative scale-105">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <Badge className="bg-primary text-primary-foreground px-4 py-1">Most Popular</Badge>
+              </div>
+              <CardHeader className="text-center pb-8">
+                <CardTitle className="text-2xl font-bold font-[family-name:var(--font-work-sans)]">Pro</CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$29</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+                <CardDescription className="mt-4">For serious content creators</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>50 videos per month</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>4K video quality</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Premium AI voices</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Advanced templates</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Priority rendering</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Email support</span>
+                  </li>
+                </ul>
+                <Button className="w-full mt-8 bg-primary hover:bg-primary/90" asChild>
+                  <a href="/pricing/checkout?plan=pro">Upgrade to Pro</a>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Enterprise Plan */}
+            <Card className="border-border shadow-sm relative">
+              <CardHeader className="text-center pb-8">
+                <CardTitle className="text-2xl font-bold font-[family-name:var(--font-work-sans)]">
+                  Enterprise
+                </CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$99</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+                <CardDescription className="mt-4">For teams and agencies</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Unlimited videos</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>4K video quality</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Custom AI voice cloning</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Custom templates</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Team collaboration</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>Priority support</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    </div>
+                    <span>API access</span>
+                  </li>
+                </ul>
+                <Button className="w-full mt-8 bg-transparent" variant="outline" asChild>
+                  <a href="/pricing/checkout?plan=enterprise">Contact Sales</a>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials Section */}
       <section id="testimonials" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
