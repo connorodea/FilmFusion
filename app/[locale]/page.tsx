@@ -4,15 +4,46 @@ import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Play, Edit3, Zap, Users, Star, ArrowRight, Video, FileText, Volume2 } from "lucide-react"
+import {
+  Play,
+  Edit3,
+  Zap,
+  Users,
+  Star,
+  ArrowRight,
+  Video,
+  FileText,
+  Volume2,
+  Twitter,
+  Facebook,
+  Linkedin,
+  Instagram,
+} from "lucide-react"
 import { Link } from "@/i18n/routing"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { SocialProof, FloatingSocialProof } from "@/components/social-proof"
+import { QuickSocialShare } from "@/components/social-share"
+import {
+  WebSiteStructuredData,
+  OrganizationStructuredData,
+  SoftwareApplicationStructuredData,
+} from "@/components/structured-data"
+import { useLocale } from "next-intl"
 
 export default function HomePage() {
   const t = useTranslations()
+  const locale = useLocale()
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://filmfusion.app"
+  const currentUrl = `${baseUrl}/${locale}`
 
   return (
     <div className="min-h-screen bg-background">
+      <WebSiteStructuredData locale={locale} />
+      <OrganizationStructuredData />
+      <SoftwareApplicationStructuredData locale={locale} />
+
+      <FloatingSocialProof />
+
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -77,6 +108,12 @@ export default function HomePage() {
                 </a>
               </Button>
             </div>
+
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <QuickSocialShare url={currentUrl} title={t("hero.title", { aiAutomation: t("hero.aiAutomation") })} />
+              <div className="text-sm text-muted-foreground">{t("social.shareWith")}</div>
+            </div>
+
             <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-muted-foreground">
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-2" />
@@ -92,6 +129,12 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="py-12 bg-muted/20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <SocialProof showStats={true} showRecentActivity={true} showTrustBadges={true} />
         </div>
       </section>
 
@@ -495,6 +538,41 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-muted-foreground mb-4">{t("footer.description")}</p>
+
+              <div className="flex items-center space-x-4">
+                <a
+                  href="https://twitter.com/filmfusion"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Twitter className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://facebook.com/filmfusion"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Facebook className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://linkedin.com/company/filmfusion"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Linkedin className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://instagram.com/filmfusion"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+              </div>
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-4 font-[family-name:var(--font-work-sans)]">

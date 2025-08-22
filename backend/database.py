@@ -57,6 +57,7 @@ class User(Base):
     content_reports = relationship("ContentReport", back_populates="reporter")
     moderation_actions = relationship("ModerationAction", back_populates="moderator")
     content_flags = relationship("ContentFlag", back_populates="flagged_by_user")
+    blog_posts = relationship("BlogPost", back_populates="author")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -346,6 +347,130 @@ class ContentFlag(Base):
     # Relationships
     flagged_by_user = relationship("User", foreign_keys=[flagged_by_user_id])
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
+
+class BlogPost(Base):
+    __tablename__ = "blog_posts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    excerpt = Column(Text)
+    content = Column(Text, nullable=False)
+    featured_image_url = Column(String)
+    
+    # SEO fields
+    meta_title = Column(String)
+    meta_description = Column(Text)
+    meta_keywords = Column(String)
+    
+    # Publishing
+    status = Column(String, default="draft")  # draft, published, archived
+    published_at = Column(DateTime(timezone=True))
+    featured = Column(Boolean, default=False)
+    
+    # Engagement
+    view_count = Column(Integer, default=0)
+    like_count = Column(Integer, default=0)
+    share_count = Column(Integer, default=0)
+    
+    # Internationalization
+    language = Column(String, default="en")
+    translated_from_id = Column(Integer, ForeignKey("blog_posts.id"), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Foreign keys
+    author_id = Column(Integer, ForeignKey("users.id"))
+    category_id = Column(Integer, ForeignKey("blog_categories.id"))
+    
+    # Relationships
+    author = relationship("User")
+    category = relationship("BlogCategory", back_populates="posts")
+    tags = relationship("BlogTag", secondary="blog_post_tags", back_populates="posts")
+    comments = relationship("BlogComment", back_populates="post", cascade="all, delete-orphan")
+    translations = relationship("BlogPost", remote_side=[id])
+
+class BlogCategory(Base):
+    __tablename__ = "blog_categories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    description = Column(Text)
+    color = Column(String, default="#3B82F6")  # Hex color for UI
+    
+    # SEO
+    meta_title = Column(String)
+    meta_description = Column(Text)
+    
+    # Internationalization
+    language = Column(String, default="en")
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    posts = relationship("BlogPost", back_populates="category")
+
+class BlogTag(Base):
+    __tablename__ = "blog_tags"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    color = Column(String, default="#10B981")  # Hex color for UI
+    
+    # Internationalization
+    language = Column(String, default="en")
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    posts = relationship("BlogPost", secondary="blog_post_tags", back_populates="tags")
+
+# Association table for many-to-many relationship between posts and tags
+from sqlalchemy import Table
+blog_post_tags = Table(
+    'blog_post_tags',
+    Base.metadata,
+    Column('post_id', Integer, ForeignKey('blog_posts.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('blog_tags.id'), primary_key=True)
+)
+
+class BlogComment(Base):
+    __tablename__ = "blog_comments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    author_name = Column(String, nullable=False)
+    author_email = Column(String, nullable=False)
+    author_website = Column(String)
+    
+    # Moderation
+    status = Column(String, default="pending")  # pending, approved, spam, deleted
+    moderated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    moderated_at = Column(DateTime(timezone=True))
+    
+    # Threading
+    parent_id = Column(Integer, ForeignKey("blog_comments.id"), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Foreign keys
+    post_id = Column(Integer, ForeignKey("blog_posts.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # For registered users
+    
+    # Relationships
+    post = relationship("BlogPost", back_populates="comments")
+    user = relationship("User")
+    moderator = relationship("User", foreign_keys=[moderated_by_id])
+    replies = relationship("BlogComment", remote_side=[id])
 
 # Create all tables
 def create_tables():
@@ -843,3 +968,145 @@ def auto_moderate_project(db: Session, project: Project) -> Optional[ContentFlag
     except Exception as e:
         logger.error(f"Auto moderation failed for project {project.id}: {str(e)}")
         return None
+
+# Blog-related utility functions
+def create_blog_post(db: Session, post_data: dict, author_id: int) -> BlogPost:
+    """Create a new blog post"""
+    db_post = BlogPost(
+        title=post_data['title'],
+        slug=post_data['slug'],
+        excerpt=post_data.get('excerpt'),
+        content=post_data['content'],
+        featured_image_url=post_data.get('featured_image_url'),
+        meta_title=post_data.get('meta_title'),
+        meta_description=post_data.get('meta_description'),
+        meta_keywords=post_data.get('meta_keywords'),
+        status=post_data.get('status', 'draft'),
+        featured=post_data.get('featured', False),
+        language=post_data.get('language', 'en'),
+        author_id=author_id,
+        category_id=post_data.get('category_id')
+    )
+    
+    if post_data.get('status') == 'published' and not post_data.get('published_at'):
+        db_post.published_at = func.now()
+    
+    db.add(db_post)
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+
+def get_blog_posts(db: Session, skip: int = 0, limit: int = 10, status: str = "published", 
+                   language: str = "en", category_id: int = None, featured: bool = None):
+    """Get blog posts with filtering"""
+    query = db.query(BlogPost).filter(BlogPost.language == language)
+    
+    if status:
+        query = query.filter(BlogPost.status == status)
+    if category_id:
+        query = query.filter(BlogPost.category_id == category_id)
+    if featured is not None:
+        query = query.filter(BlogPost.featured == featured)
+    
+    return query.order_by(BlogPost.published_at.desc()).offset(skip).limit(limit).all()
+
+def get_blog_post_by_slug(db: Session, slug: str, language: str = "en") -> Optional[BlogPost]:
+    """Get a blog post by slug"""
+    return db.query(BlogPost).filter(
+        BlogPost.slug == slug,
+        BlogPost.language == language,
+        BlogPost.status == "published"
+    ).first()
+
+def increment_post_views(db: Session, post_id: int):
+    """Increment view count for a blog post"""
+    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    if post:
+        post.view_count += 1
+        db.commit()
+
+def create_blog_category(db: Session, category_data: dict) -> BlogCategory:
+    """Create a new blog category"""
+    db_category = BlogCategory(
+        name=category_data['name'],
+        slug=category_data['slug'],
+        description=category_data.get('description'),
+        color=category_data.get('color', '#3B82F6'),
+        meta_title=category_data.get('meta_title'),
+        meta_description=category_data.get('meta_description'),
+        language=category_data.get('language', 'en')
+    )
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+def get_blog_categories(db: Session, language: str = "en"):
+    """Get all blog categories"""
+    return db.query(BlogCategory).filter(BlogCategory.language == language).all()
+
+def create_blog_tag(db: Session, tag_data: dict) -> BlogTag:
+    """Create a new blog tag"""
+    db_tag = BlogTag(
+        name=tag_data['name'],
+        slug=tag_data['slug'],
+        color=tag_data.get('color', '#10B981'),
+        language=tag_data.get('language', 'en')
+    )
+    db.add(db_tag)
+    db.commit()
+    db.refresh(db_tag)
+    return db_tag
+
+def get_blog_tags(db: Session, language: str = "en"):
+    """Get all blog tags"""
+    return db.query(BlogTag).filter(BlogTag.language == language).all()
+
+def get_popular_posts(db: Session, limit: int = 5, language: str = "en"):
+    """Get popular blog posts by view count"""
+    return db.query(BlogPost).filter(
+        BlogPost.status == "published",
+        BlogPost.language == language
+    ).order_by(BlogPost.view_count.desc()).limit(limit).all()
+
+def get_recent_posts(db: Session, limit: int = 5, language: str = "en"):
+    """Get recent blog posts"""
+    return db.query(BlogPost).filter(
+        BlogPost.status == "published",
+        BlogPost.language == language
+    ).order_by(BlogPost.published_at.desc()).limit(limit).all()
+
+def search_blog_posts(db: Session, query: str, language: str = "en", skip: int = 0, limit: int = 10):
+    """Search blog posts by title and content"""
+    search_filter = (
+        BlogPost.title.contains(query) |
+        BlogPost.content.contains(query) |
+        BlogPost.excerpt.contains(query)
+    )
+    
+    return db.query(BlogPost).filter(
+        search_filter,
+        BlogPost.status == "published",
+        BlogPost.language == language
+    ).order_by(BlogPost.published_at.desc()).offset(skip).limit(limit).all()
+
+def get_blog_stats(db: Session):
+    """Get blog statistics"""
+    total_posts = db.query(BlogPost).count()
+    published_posts = db.query(BlogPost).filter(BlogPost.status == "published").count()
+    draft_posts = db.query(BlogPost).filter(BlogPost.status == "draft").count()
+    total_categories = db.query(BlogCategory).count()
+    total_tags = db.query(BlogTag).count()
+    total_comments = db.query(BlogComment).count()
+    approved_comments = db.query(BlogComment).filter(BlogComment.status == "approved").count()
+    
+    return {
+        "total_posts": total_posts,
+        "published_posts": published_posts,
+        "draft_posts": draft_posts,
+        "total_categories": total_categories,
+        "total_tags": total_tags,
+        "total_comments": total_comments,
+        "approved_comments": approved_comments,
+        "publish_rate": (published_posts / total_posts * 100) if total_posts > 0 else 0
+    }
