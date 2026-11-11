@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "status": "concept_only_not_cleared",
+  "warning": "All titles, names, characters and designs are fictional draft concepts. Verify rights/trademarks and commission or create actual original art before release.",
+  "shows": [
+    {
+      "show_id": "pocket_chaos_lab",
+      "working_title": "Pocket Chaos Lab",
+      "version": "concept-0.1",
+      "audience": "broad teens/adults; visually understandable globally",
+      "creative_promise": "A peculiar invention fails in a surprising but causally readable way every episode.",
+      "tone": ["playful", "physical", "curious", "harmlessly chaotic"],
+      "visual_direction": {
+        "description": "Original soft geometric laboratory characters with unequal asymmetrical eyes, rounded hexagon props, paper-like modular backgrounds; flat 2D vector art with extremely simple shadows.",
+        "palette": {"ink": "#243344", "lab_wall": "#EDF2E9", "mint": "#7ACBA8", "tangerine": "#F8A44A", "violet": "#8561C8"},
+        "stroke_px_at_1080": 7,
+        "movement": "Elastic transform-based comedy, carefully timed anticipation and reaction; no copied stick figure designs.",
+        "negative_prompt": "No known cartoon characters, no Pencilmation identifiers, no imitation of artist-specific linework, no text artifacts, no brand logos"
+      },
+      "characters": [
+        {"id": "pip", "name": "Pip (working)", "silhouette": "squat mint trapezoid with one long floating eyestalk", "flaw": "cannot resist testing unverified devices", "drive": "prove every invention is useful", "voice": "nonverbal squeaks and custom foley only"},
+        {"id": "orbit", "name": "Orbit (working)", "silhouette": "three-piece violet orbital ring with expressive center dot", "flaw": "overconfident", "drive": "win every physics argument", "voice": "short non-language exclamations"}
+      ],
+      "locations": ["small_test_bench", "empty_white_cyclorama", "storage_room"],
+      "recurring_rules": ["Every invention has one stated rule", "Each new consequence follows the device's rule", "A silent visual reversal resolves the short"],
+      "episode_seeds": ["Gravity Toaster", "Politely Magnetic", "Impossible Elevator", "Rain Repellent Umbrella"],
+      "primary_metrics": ["engaged_shorts_views", "viewed_vs_swiped", "average_percentage_viewed"]
+    },
+    {
+      "show_id": "department_minor_catastrophes",
+      "working_title": "Department of Minor Catastrophes",
+      "version": "concept-0.1",
+      "audience": "18-34 surreal character sitcom fans",
+      "creative_promise": "Colossal cosmic emergencies receive banal municipal responses from uniquely flawed workers.",
+      "tone": ["dry", "oddly sincere", "bureaucratic", "character-driven"],
+      "visual_direction": {
+        "description": "Original angular cutout figure rigs made from irregular stationery-like shapes; fluorescent civic office with angular windows, handwritten case stickers and graphic-designed forms; no rural outdoor animation resemblance.",
+        "palette": {"ink": "#1E2830", "paper": "#F7F0DD", "fluorescent_teal": "#42B9AD", "file_orange": "#E87445", "institutional_blue": "#647D92"},
+        "stroke_px_at_1080": 5,
+        "movement": "Deadpan held poses, slow unmotivated camera pushes, asymmetric jaw and eyebrow changes, occasional sudden prop actions.",
+        "negative_prompt": "No Big Lez, no Sasquatch, no recognizable Australian bush cartoon motifs, no existing character silhouettes, no original series quotes or music"
+      },
+      "characters": [
+        {"id": "rhea", "name": "Rhea (working)", "silhouette": "tall angular humanoid with a slanted rectangular head and long asymmetric paperclip arms", "flaw": "procedural stubbornness", "drive": "keep the department running according to her rulebook", "voice": "licensed dry, low-energy voice; abrupt sentence endings"},
+        {"id": "staple", "name": "Staple (working)", "silhouette": "compact off-white filing automaton with a single orange offset eye and clip-like feet", "flaw": "catastrophizes ordinary paperwork", "drive": "be a competent partner", "voice": "licensed quick, anxious voice with clipped rhythm"},
+        {"id": "supervisor", "name": "Supervisor (working)", "silhouette": "normally unseen; appears only as an intercom light", "flaw": "extreme delegation", "drive": "maintain perfect departmental statistics", "voice": "licensed muffled PA voice"}
+      ],
+      "locations": ["claims_counter", "records_archive", "waiting_room", "supply_closet"],
+      "recurring_rules": ["No one admits the cosmic office runs the universe", "All supernatural events require paperwork", "Problems worsen when characters try to avoid responsibility", "Quiet emotional sincerity occasionally interrupts absurdity"],
+      "episode_seeds": ["Someone Misfiled Tuesday", "The Sun Was Repossessed", "Annual Black Hole Inspection", "A Queue Forms Outside Time"],
+      "primary_metrics": ["first_30s_retention", "average_view_percentage", "returning_viewers", "next_episode_clicks"]
+    },
+    {
+      "show_id": "signal_at_midnight",
+      "working_title": "Signal at Midnight",
+      "version": "concept-0.1",
+      "audience": "16+ fictional supernatural mystery and suspense fans",
+      "creative_promise": "A fictional late-night archivist receives a strange transmission; each episode changes what the town believes is possible.",
+      "tone": ["uncanny", "measured", "empathetic", "investigative"],
+      "visual_direction": {
+        "description": "Original two-tone inked city panels and a geometric radio studio, subtle paper grain, elongated rectangular architecture, cyan frequency graphics and sparse amber warning lights.",
+        "palette": {"night": "#10162B", "slate": "#344760", "cyan": "#60D6D9", "warning_amber": "#E1A34B", "paper": "#D7DBD7"},
+        "stroke_px_at_1080": 4,
+        "movement": "Limited character movement, parallax panels, shadow passes, small push-ins and audio-driven cuts; no photorealism.",
+        "negative_prompt": "No real missing persons, no fake found-footage documentary claims, no copied horror-creepypasta characters, no recognizable film/game creature designs"
+      },
+      "characters": [
+        {"id": "eda", "name": "Eda (working)", "silhouette": "single elongated oval face with crescent glasses and a squared coat collar", "flaw": "overestimates her ability to explain anomalies", "drive": "keep the archive accurate", "voice": "licensed warm measured narration with restrained alarm"},
+        {"id": "the_signal", "name": "The Signal (working)", "silhouette": "abstract fragmented waveform, never a realistic person", "flaw": "speaks in incomplete patterns", "drive": "unknown in season one", "voice": "original designed sound effect, not an impersonation"}
+      ],
+      "locations": ["radio_archive", "empty_street", "stairwell", "telephone_booth"],
+      "recurring_rules": ["Stories are explicitly fictional", "Every episode adds one consistent rule to the mysterious signal", "Do not rely on shock gore or deceptive real-world claims", "Close each episode with a meaningful reveal"],
+      "episode_seeds": ["The Elevator Only Stops on Yesterday", "Broadcast 009: Your Name Isn't Yours", "The Corner Where It Never Rains", "There Are Two Last Trains"],
+      "primary_metrics": ["average_view_duration", "first_30s_retention", "episode_completion", "returning_viewers"]
+    }
+  ]
+}

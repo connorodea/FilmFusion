@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "research_asof": "2026-11-10",
+  "metric_definitions": {
+    "subscribers": "Public rounded channel subscribers at the dated snapshot",
+    "lifetime_views": "Cumulative public channel views, NOT latest-month views",
+    "video_count": "Public upload/video count at snapshot; can include different formats",
+    "recent_views": "Third-party rolling-window channel views; null when not reliably sourced",
+    "reference_video_views": "Single video's cumulative public views at tracker snapshot, if available",
+    "data_warning": "YouTube changed channel viewCount counting on 2026-08-24 and Shorts public views counting on 2025-03-31. Channel ages, format mixes, and counting methodology differ."
+  },
+  "channels": [
+    {
+      "handle": "@thebiglezshowofficial", "name": "THE BIG LEZ SHOW OFFICIAL", "channel_url": "https://www.youtube.com/@THEBIGLEZSHOWOFFICIAL", "format": "low-fidelity original adult sitcom / recurring-character universe", "subscribers": 2550000, "lifetime_views": 377915162, "video_count": 86, "snapshot_date": "2026-11-07", "source_url": "https://viewgoblin.com/channels/thebiglezshowofficial", "recent_views": null,
+      "reference_video": {"title": "SASSY THE SASQUATCH | EP01 | SEEN A DINOSAUR", "video_url": "https://www.youtube.com/watch?v=9OmR0ypCyOU", "views_approx": 11855000, "source_url": "https://trendreport.com/channels/stats/thebiglezshowofficial/"},
+      "analyst_note": "Very low public upload volume relative to cumulative views; recognizable recurring characters and spin-offs."
+    },
+    {
+      "handle": "@meatcanyon", "name": "MeatCanyon", "channel_url": "https://www.youtube.com/@meatcanyon", "format": "adult grotesque satire / topical and evergreen sketches", "subscribers": 9170000, "lifetime_views": 1796604039, "video_count": 249, "snapshot_date": "2026-11-01", "source_url": "https://vidiq.com/youtube-stats/channel/@meatcanyon/", "recent_views": {"window_days": 28, "views_approx": 10340000},
+      "reference_video": {"title": "King Of Mukbang", "video_url": null, "views_approx": 28140000, "source_url": "https://vidiq.com/youtube-stats/channel/@meatcanyon/"},
+      "analyst_note": "Distinctive auteur tone; animation can be expensive despite a simple-looking output."
+    },
+    {
+      "handle": "@cas", "name": "Cas van de Pol", "channel_url": "https://www.youtube.com/@cas", "format": "fast physical gags / parody recaps / Shorts", "subscribers": 8830000, "lifetime_views": 2865038890, "video_count": 384, "snapshot_date": "2026-10-29", "source_url": "https://vidiq.com/youtube-stats/channel/@cas/", "recent_views": {"window_days": 28, "views_approx": 24667539}, "reference_video": null,
+      "analyst_note": "Strong evidence for visual gags, but copyrighted fan IP raises licensing/fair-use uncertainty for imitation."
+    },
+    {
+      "handle": "@terminalmontage", "name": "TerminalMontage", "channel_url": "https://www.youtube.com/@terminalmontage", "format": "high-energy gaming animations", "subscribers": 5290000, "lifetime_views": 1581754260, "video_count": 187, "snapshot_date": "2026-11-01", "source_url": "https://vidiq.com/youtube-stats/channel/@terminalmontage/", "recent_views": {"window_days": 28, "views_approx": 10150000},
+      "reference_video": {"title": "Something About Resident Evil Requiem ANIMATED", "video_url": null, "views_approx": 2760000, "source_url": "https://vidiq.com/youtube-stats/channel/@terminalmontage/"},
+      "analyst_note": "Strong cult and replay behavior; highly choreographed action has higher rigging/editorial complexity."
+    },
+    {
+      "handle": "@explosmentertainment", "name": "ExplosmEntertainment", "channel_url": "https://www.youtube.com/@explosmentertainment", "format": "Cyanide & Happiness minimalist dark-comedy sketches", "subscribers": 12900000, "lifetime_views": 5027381176, "video_count": 1764, "snapshot_date": "2026-11-03", "source_url": "https://vidiq.com/youtube-stats/channel/@explosmentertainment/", "recent_views": {"window_days": 28, "views_approx": 5090000}, "reference_video": null,
+      "analyst_note": "High-output scalable limited animation; joke quality and character timing matter."
+    },
+    {
+      "handle": "@pencilmation", "name": "Pencilmation", "channel_url": "https://www.youtube.com/@pencilmation", "format": "dialogue-light slapstick", "subscribers": 20500000, "lifetime_views": 12334003650, "video_count": 1990, "snapshot_date": "2026-11-10", "source_url": "https://vidiq.com/youtube-stats/channel/@pencilmation/videos/", "recent_views": null,
+      "reference_video": {"title": "Corn Drama", "video_url": null, "views_approx": 4257488, "published_at": "2026-11-02", "source_url": "https://vidiq.com/youtube-stats/channel/@pencilmation/videos/"},
+      "analyst_note": "High outlier variance even within roughly 60-second videos; localization advantage."
+    },
+    {
+      "handle": "@simonscat", "name": "Simon's Cat", "channel_url": "https://www.youtube.com/@simonscat", "format": "evergreen character-driven nonverbal animal humor", "subscribers": 6620000, "lifetime_views": 1819596063, "video_count": 843, "snapshot_date": "2026-11-10", "source_url": "https://vidiq.com/youtube-stats/channel/@simonscat/", "recent_views": {"window_days": 28, "views_approx": 16230000},
+      "reference_video": {"title": "CRAZY KITTEN (Full Colour Special!)", "video_url": null, "views_approx": 28980000, "source_url": "https://vidiq.com/youtube-stats/channel/@simonscat/"},
+      "analyst_note": "Original character relationships can support long-tail evergreen views."
+    },
+    {
+      "handle": "@chiknnuggit", "name": "Chikn Nuggit", "channel_url": "https://www.youtube.com/@chiknnuggit", "format": "character-led short sketches and fandom lore", "subscribers": 3480000, "lifetime_views": 3122653203, "video_count": 868, "snapshot_date": "2026-11-09", "source_url": "https://viewgoblin.com/channels/chiknnuggit", "recent_views": null, "reference_video": null,
+      "analyst_note": "Shorts can develop deep character fandom; check audience designation and advertiser policy."
+    },
+    {
+      "handle": "@bfdi", "name": "jacknjellify", "channel_url": "https://www.youtube.com/@bfdi", "format": "interactive object-show serial with voting and lore", "subscribers": 3620000, "lifetime_views": 2961797282, "video_count": 1068, "snapshot_date": "2026-11-04", "source_url": "https://socialblade.com/youtube/channel/UCeKLuqGciqZZ5RFYk5CbqXg", "recent_views": null,
+      "reference_video": {"title": "BFDI 1a: Take the Plunge", "video_url": null, "views_approx": 76733391, "source_url": "https://trendreport.com/channels/stats/bfdi/"},
+      "analyst_note": "Fan votes/fandom can reinforce episodic retention; audience community overhead is substantial."
+    },
+    {
+      "handle": "@theodd1sout", "name": "TheOdd1sOut", "channel_url": "https://www.youtube.com/@theodd1sout", "format": "narrated personal storytime", "subscribers": 20800000, "lifetime_views": 5937862595, "video_count": 211, "snapshot_date": "2026-11-10", "source_url": "https://viewgoblin.com/channels/theodd1sout", "recent_views": null, "reference_video": null,
+      "analyst_note": "Creator's authentic voice is a major value component and is not automatically transferrable to AI."
+    },
+    {
+      "handle": "@carbotanimations", "name": "CarbotAnimations", "channel_url": "https://www.youtube.com/@carbotanimations", "format": "minimalist gaming animation", "subscribers": 2470000, "lifetime_views": 1435269934, "video_count": 1615, "snapshot_date": "2026-11-09", "source_url": "https://www.tubeleader.com/youtube-channel/carbotanimations", "recent_views": null, "reference_video": null,
+      "analyst_note": "Demonstrates repeatable visual language; game franchises' protected IP should not be automatically reused."
+    },
+    {
+      "handle": "@llamaarts", "name": "Llama Arts", "channel_url": "https://www.youtube.com/@llamaarts", "format": "narrated horror anthology", "subscribers": 2570000, "lifetime_views": 325056571, "video_count": 107, "snapshot_date": "2026-11-06", "source_url": "https://socialblade.com/youtube/handle/llamaarts", "recent_views": null, "reference_video": null,
+      "analyst_note": "Narration/atmosphere lower movement requirements; low recent activity means historic fame is not proof of a current growth opportunity."
+    },
+    {
+      "handle": "@wastedseries", "name": "Wasted Series", "channel_url": "https://www.youtube.com/@WastedSeries", "format": "Spanish-language regional adult animated sitcom", "subscribers": 649000, "lifetime_views": 57819686, "video_count": 162, "snapshot_date": "2026-11-06", "source_url": "https://vidiq.com/youtube-stats/channel/@wastedseries/", "recent_views": null, "reference_video": null,
+      "analyst_note": "Founded 2024; evidence that new culturally distinctive fiction can break through."
+    },
+    {
+      "handle": "@vewn", "name": "vewn", "channel_url": "https://www.youtube.com/@vewn", "format": "independent surreal/psychological short films", "subscribers": 1590000, "lifetime_views": 97552315, "video_count": 31, "snapshot_date": "2026-11-10", "source_url": "https://www.tubeleader.com/youtube-channel/vewn", "recent_views": null, "reference_video": null,
+      "analyst_note": "High views-per-upload historical signal but labor-intensive auteur artistry is hard to automate without losing the appeal."
+    }
+  ]
+}

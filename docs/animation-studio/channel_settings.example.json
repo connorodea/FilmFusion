@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Illustrative multi-show workflow settings. No channels/accounts/API keys are connected; schedules are dry-run only.",
+  "production_environment": "dry_run",
+  "global_limits": {"max_concurrent_renders": 1, "max_automatic_rewrites_per_stage": 3, "human_final_approval_required": true, "default_fps": 30, "total_budget_usd_per_month": 0},
+  "external_providers": {"youtube_oauth_connection": null, "tts": "unconfigured", "transcription": "unconfigured", "llm": "unconfigured", "object_store": "local_test_only"},
+  "channels": [
+    {
+      "show_id": "pocket_chaos_lab", "youtube_channel_id": null, "language": "en-US", "targets": {"pilot_shorts": 8, "pilot_longs": 0},
+      "output": {"short_width": 1080, "short_height": 1920, "long_width": 1920, "long_height": 1080, "fps": 30},
+      "content_policy": {"audience": "review_required", "ad_suitability": "broad", "max_script_reuse_ratio": 0.0, "auto_publish": false},
+      "release_window": {"timezone": "America/Denver", "day_of_week": ["TU", "TH", "SA"], "hour_local": 12, "enabled": false}
+    },
+    {
+      "show_id": "department_minor_catastrophes", "youtube_channel_id": null, "language": "en-US", "targets": {"pilot_shorts": 4, "pilot_longs": 2},
+      "output": {"short_width": 1080, "short_height": 1920, "long_width": 1920, "long_height": 1080, "fps": 30},
+      "content_policy": {"audience": "not_made_for_kids", "ad_suitability": "mild_adult_comedy", "max_script_reuse_ratio": 0.0, "auto_publish": false},
+      "release_window": {"timezone": "America/Denver", "day_of_week": ["WE"], "hour_local": 17, "enabled": false}
+    },
+    {
+      "show_id": "signal_at_midnight", "youtube_channel_id": null, "language": "en-US", "targets": {"pilot_shorts": 4, "pilot_longs": 2},
+      "output": {"short_width": 1080, "short_height": 1920, "long_width": 1920, "long_height": 1080, "fps": 30},
+      "content_policy": {"audience": "not_made_for_kids", "ad_suitability": "non_graphic_fictional_suspense", "max_script_reuse_ratio": 0.0, "auto_publish": false},
+      "release_window": {"timezone": "America/Denver", "day_of_week": ["SU"], "hour_local": 19, "enabled": false}
+    }
+  ]
+}
